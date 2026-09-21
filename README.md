@@ -2,6 +2,8 @@
 
 **Mop the slop out of your LinkedIn feed.**
 
+[slopmop.lol](https://slopmop.lol)
+
 *Not an AI detector. A bad-writing detector.* Your attention deserves a filter you control.
 
 Free. No signup. MIT licensed. Desktop Chrome and other Chromium browsers, LinkedIn only for now.
