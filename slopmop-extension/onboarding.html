@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Welcome to Slop Mop</title>
+<link rel="stylesheet" href="/src/onboarding/onboarding.css" />
+</head>
+<body>
+<main>
+  <div class="brand"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="10.6" y="2" width="2.8" height="12" rx="1.4" fill="currentColor"/><path d="M5.2 13.6h13.6l-1.6 8.2H6.8z" fill="currentColor"/><path d="M8.6 16.6v4.6M12 16.6v4.6M15.4 16.6v4.6" stroke="#fff" stroke-width="1.15" stroke-linecap="round"/></svg><h1>Slop Mop</h1></div>
+  <p class="sub">Fold or highlight AI-written posts in your LinkedIn feed.</p>
+  <div class="card"><h2>What it does</h2>
+    <p>On LinkedIn, Slop Mop reads posts as they load, asks TypeSafe's <b>Jev</b> model to judge the writing against a library of known AI tells (whether an AI drafted it is one input among twelve), and either folds the worst into a paper strip or outlines them (yellow: possibly slop, red: likely slop). It targets formulaic AI writing, and goes easier on posts people find useful.</p></div>
+  <div class="card"><h2>Vote on a post</h2>
+    <p>Every post gets a small grey mop icon beside its “…” menu. Choose <b>No</b>, <b>Maybe</b> or <b>Probably</b> (slop). In Highlight mode your vote sets the border (blue, yellow or red); in Hide mode “Probably” hides the post. Your votes are kept in this browser and shared anonymously so others can see how many people flagged a post.</p></div>
+  <div class="card"><h2>Research purposes only</h2>
+    <p>Slop Mop is an experimental research project and a showcase for Jev. Its judgments are probabilistic and will sometimes be wrong. To score a post, its <b>text is sent to the Slop Mop server and on to TypeSafe's Jev model</b>. Here is what happens to it:</p>
+    <ul><li>The server keeps a small registry so people can benefit from each other's votes: for each post it stores a <b>one-way hash of the text</b> (not the text itself), the post's LinkedIn id when it has one, Jev's scores, engagement counts, when it was seen, and how many people voted <i>No / Maybe / Probably</i>.</li>
+    <li>It does not store author names, and does not keep copies of posts. Your votes are attached to a random install id (never your name or LinkedIn account), and only a salted hash of that id is stored.</li>
+    <li>To run the service and track its cost, the server also logs each check: the time, how large it was, how long Jev took, whether it worked, and the hashed install id. Those logs are kept for 90 days and are visible only to the person running the server.</li>
+    <li>Each install can check up to 250 posts a day. Scores and your votes are also kept in this browser.</li>
+    <li>You can turn Slop Mop off at any time from the toolbar icon.</li></ul></div>
+  <label><input type="checkbox" id="ack" /> <span>I understand this is for research purposes only and that post text will be sent to a server for classification.</span></label>
+  <button id="go" disabled>Enable Slop Mop</button><span id="done"></span>
+</main>
+<script type="module" src="/src/onboarding/onboarding.ts"></script>
+</body>
+</html>

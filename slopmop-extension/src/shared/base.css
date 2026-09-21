@@ -1,0 +1,7 @@
+/* From the design system's tokens/base.css: page defaults for the extension's own pages. */
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--surface-page);color:var(--text-body);font:var(--type-body);-webkit-font-smoothing:antialiased}
+a{color:var(--text-link);text-decoration-thickness:1px;text-underline-offset:2px}
+a:hover{color:var(--ink-900);text-decoration-color:var(--mop-500)}
+::selection{background:var(--mop-200);color:var(--ink-900)}
+:focus-visible{outline:none;box-shadow:var(--shadow-focus)}

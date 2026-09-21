@@ -1,0 +1,4 @@
+:host{all:initial;display:inline-flex;align-items:center;vertical-align:middle;flex:none}
+button{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;cursor:pointer;transition:var(--transition-ui)}
+button:hover{background:var(--paper-200)}
+button:focus-visible{box-shadow:var(--shadow-focus)}

@@ -1,0 +1,6 @@
+<!doctype html><html><head><meta charset="utf-8"><title>popup harness</title></head><body>
+<script src="chrome-stub.js"></script>
+<script>
+// Loads the built popup with chrome.* stubbed so it can be viewed in a normal tab.
+fetch("/dist/popup.html").then((r) => r.text()).then((h) => { document.open(); document.write(h.replaceAll("./assets", "/dist/assets")); document.close(); });
+</script></body></html>

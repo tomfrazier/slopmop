@@ -1,0 +1,21 @@
+@import "../shared/fonts.css";
+@import "../shared/tokens.css";
+@import "../shared/base.css";
+main{max-width:600px;margin:0 auto;padding:var(--space-10) var(--space-7)}
+.brand{display:flex;align-items:center;gap:var(--space-4);margin-bottom:var(--space-3)}
+h1{font:var(--type-title);letter-spacing:var(--tracking-tight);margin:0}
+.sub{color:var(--text-muted);margin:0 0 var(--space-8);font:var(--type-body-sm)}
+.card{background:var(--surface-card);border:var(--border-width) solid var(--border-hairline);border-radius:var(--radius-md);box-shadow:var(--shadow-card);padding:var(--space-6) var(--space-7);margin-bottom:var(--space-6);font:var(--type-body-sm)}
+.note{margin:var(--space-3) 0 0;color:var(--text-muted);font:var(--type-label)}
+.dbg-toggle{display:flex;gap:var(--space-4);align-items:center;cursor:pointer;font:var(--type-ui)}
+input[type=checkbox]{width:16px;height:16px;accent-color:var(--mop-500)}
+#debug-panel dl{margin:var(--space-5) 0 0;display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3) var(--space-7)}
+#debug-panel dl div{display:flex;justify-content:space-between;font:var(--type-label)}
+#debug-panel dt{color:var(--text-muted)}#debug-panel dd{margin:0;font:var(--type-mono);color:var(--text-body)}
+.note.err{color:var(--red-700);word-break:break-word}.note.err:empty{display:none}
+.lbl-head{display:flex;justify-content:space-between}.dim{color:var(--text-faint);font:var(--type-mono)}
+.lbl-actions{display:flex;gap:var(--space-4);margin-top:var(--space-5)}
+.lbl-actions button{flex:1;font:var(--type-ui);height:30px;padding:0 var(--space-4);border-radius:var(--radius-sm);border:var(--border-width) solid var(--border-default);background:var(--paper-000);color:var(--text-body);cursor:pointer;box-shadow:var(--shadow-card);transition:var(--transition-ui)}
+.lbl-actions button:hover{background:var(--paper-100)}.lbl-actions button.danger{color:var(--red-700)}
+.lbl-actions button:disabled{opacity:.45;cursor:not-allowed}
+.sync{margin:var(--space-3) 0 0;font:var(--type-label)}.sync.ok{color:var(--blue-700)}.sync.warn{color:var(--mop-900)}

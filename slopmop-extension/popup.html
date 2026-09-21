@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Slop Mop</title>
+<link rel="stylesheet" href="/src/popup/popup.css" />
+</head>
+<body>
+<header>
+  <div class="brand"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="10.6" y="2" width="2.8" height="12" rx="1.4" fill="currentColor"/><path d="M5.2 13.6h13.6l-1.6 8.2H6.8z" fill="currentColor"/><path d="M8.6 16.6v4.6M12 16.6v4.6M15.4 16.6v4.6" stroke="#fff" stroke-width="1.15" stroke-linecap="round"/></svg><h1>Slop Mop</h1></div>
+  <label class="switch" title="Enable or disable Slop Mop">
+    <input id="enabled" type="checkbox" role="switch" aria-label="Enable Slop Mop" />
+    <span class="track"><span class="knob"></span></span>
+  </label>
+</header>
+
+<main id="main">
+  <section>
+    <div class="label">Mode</div>
+    <div class="seg" role="radiogroup" aria-label="Mode">
+      <button role="radio" data-mode="hide">Hide posts</button>
+      <button role="radio" data-mode="highlight">Highlight only</button>
+    </div>
+    <p class="note" id="mode-note"></p>
+  </section>
+
+  <section>
+    <div class="label">Sensitivity</div>
+    <div class="seg seg3" role="radiogroup" aria-label="Sensitivity">
+      <button role="radio" data-sens="mild">Mild</button>
+      <button role="radio" data-sens="moderate">Moderate</button>
+      <button role="radio" data-sens="aggressive">Aggressive</button>
+    </div>
+    <p class="note" id="sens-note"></p>
+  </section>
+
+  <section class="stats">
+    <div class="label">Hidden posts</div>
+    <div class="row">
+      <div class="cells"><div><b id="s-today">–</b><span>today</span></div><div><b id="s-week">–</b><span>week</span></div><div><b id="s-month">–</b><span>month</span></div><div><b id="s-total">–</b><span>all time</span></div></div>
+    </div>
+    <p class="note" id="flagged"></p>
+  </section>
+
+  <section class="usage-box">
+    <div class="label">Checks today</div>
+    <div class="usage-row"><b id="usage-n">–</b><span id="usage-of"></span></div>
+    <div class="meter" aria-hidden="true"><i id="usage-bar"></i></div>
+    <p class="note" id="usage-note"></p>
+  </section>
+</main>
+
+<footer>Research purposes only · <a href="onboarding.html" target="_blank">About &amp; privacy</a> · <a href="#" id="open-settings">Settings</a></footer>
+<script type="module" src="/src/popup/popup.ts"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+/** The Slop Mop design system's fixed colours, for the places that paint from code (SVG attributes, inline outlines). CSS uses the tokens in tokens.css. */
+export const PALETTE = {
+  ink900: "#16181A",
+  ink600: "#565C63",
+  ink500: "#6E757D",
+  ink400: "#8D949B",
+  ink300: "#B2B8BE",
+  ink200: "#D3D7DB",
+  ink100: "#E6E9EC",
+  paper000: "#FFFFFF",
+  paper200: "#EFF1F3",
+  mop500: "#F5B400",
+  mop300: "#FFD24A",
+  mop200: "#FFE9A8",
+  mop900: "#7A5A00",
+  red500: "#D93025",
+  red200: "#F6C6C2",
+  blue500: "#2F6FBF",
+  blue200: "#C6DCF4",
+} as const;

@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Slop Mop harness</title>
+<style>body{margin:0;background:#f4f2ee;font-family:-apple-system,sans-serif}main{max-width:540px;margin:0 auto;padding:16px}
+.feed-shared-update-v2{background:#fff;border:1px solid #e0dfdc;border-radius:8px;margin-bottom:8px;padding:14px}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.head .btns{display:flex;align-items:center}.head button{all:unset;cursor:pointer;width:32px;height:32px;border-radius:50%;text-align:center;line-height:32px;font-size:16px;color:#666}.head button:hover{background:rgba(0,0,0,.08)}.actor{font-weight:600}.update-components-text{white-space:pre-wrap;line-height:1.45}
+.social-details-social-counts__reactions-count{color:#666;font-size:12px;margin-top:8px}</style></head>
+<body><main id="feed"><p style="color:#666;font-size:12px">Harness: fake LinkedIn feed (synthetic markup) + stubbed chrome APIs.</p></main>
+<script>
+const slop = `I got fired last year.\n\nBest thing that ever happened to me.\n\nHere's what nobody tells you:\n\nSuccess isn't just about hard work — it's about unlocking your true potential.\n\nThe distinction matters because leadership is less like managing and more like gardening.\n\nWithout sacrificing your values, you can elevate your career.\n\nAgree? Comment YES below and repost ♻️ to help others.`;
+const human = `We finally shipped the billing migration last Thursday, and I'm still a bit stunned it worked. Three of us spent six weeks untangling a cron job from 2016 that nobody dared touch (I'm looking at you, Dave). The scariest bit: a rounding bug that would've overcharged about 400 customers by a few cents each. Caught it in staging by pure luck. Anyway, pizza's on me Friday.`;
+const mid = `Three lessons from scaling our support team from 5 to 40 people. First, hire for judgment, not just speed. Second, document the boring stuff early because it matters more than you think. Third, ultimately, your process should serve customers rather than merely satisfy dashboards. Curious how other teams handle escalation policies at this scale?`;
+const short = "Excited to share I'm starting a new role!";
+const posts = [["urn:li:activity:1", "hi", slop, "1.2K"], ["urn:li:activity:2", "human", human, "88"], ["urn:li:activity:3", "mid", mid, "310"], ["urn:li:activity:4", "hi", short, "5"], ["urn:li:activity:5", "hi", "Congrats!", "2"], ["urn:li:activity:6", "hi", slop + " (sponsored)", "9"]];
+document.getElementById("feed").insertAdjacentHTML("beforeend", posts.map(([u, c, t, r]) => `<div class="feed-shared-update-v2" data-urn="${u}" data-canned="${c}"><div class="head"><div class="actor">Someone ${u.slice(-1)}</div><div class="btns"><button aria-label="Open control menu for post by Someone ${u.slice(-1)}">•••</button><button aria-label="Hide post by Someone ${u.slice(-1)}">✕</button></div></div>${u.endsWith(":6") ? `<svg aria-label="View Sponsored Content" width="1" height="1"></svg>` : ""}<div class="update-components-text">${t}</div><div class="social-details-social-counts__reactions-count">${r}</div></div>`).join(""));
+</script>
+<script src="chrome-stub.js"></script>
+<script src="/dist/content.js"></script>
+</body></html>

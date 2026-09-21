@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Slop Mop settings</title>
+<link rel="stylesheet" href="/src/options/options.css" />
+</head>
+<body>
+<main>
+  <div class="brand"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="10.6" y="2" width="2.8" height="12" rx="1.4" fill="currentColor"/><path d="M5.2 13.6h13.6l-1.6 8.2H6.8z" fill="currentColor"/><path d="M8.6 16.6v4.6M12 16.6v4.6M15.4 16.6v4.6" stroke="#fff" stroke-width="1.15" stroke-linecap="round"/></svg><h1>Slop Mop settings</h1></div>
+  <p class="sub">Mode and sensitivity are in the toolbar popup. This page is for developer options.</p>
+
+  <section class="card debug" id="debug-section">
+    <label class="dbg-toggle"><input id="debug" type="checkbox" /> <span><b>Debug mode</b></span></label>
+    <p class="note">Shows the number of posts sent to the server on the toolbar badge, the counters below, and the arithmetic in the Details panel. It changes nothing about which posts get an icon or a border.</p>
+    <div id="debug-panel" hidden>
+      <dl>
+        <div><dt>Sent to server</dt><dd id="d-sent">–</dd></div>
+        <div><dt>From cache</dt><dd id="d-cached">–</dd></div>
+        <div><dt>Errors</dt><dd id="d-errors">–</dd></div>
+        <div><dt>Posts detected</dt><dd id="d-detected">–</dd></div>
+        <div><dt>Ads skipped</dt><dd id="d-ads">–</dd></div>
+        <div><dt>Your posts</dt><dd id="d-own">–</dd></div>
+        <div><dt>Skipped (short or other language)</dt><dd id="d-skipped">–</dd></div>
+      </dl>
+      <p class="note">Totals across your open LinkedIn tabs since each loaded.</p>
+      <p class="note err" id="d-error"></p>
+    </div>
+  </section>
+
+  <section class="card labels">
+    <div class="lbl-head"><b>Saved votes</b> <span id="lbl-count" class="dim">0</span></div>
+    <p class="note" id="lbl-note-main"></p>
+    <p class="sync" id="lbl-sync"></p>
+    <div class="lbl-actions">
+      <button id="lbl-sync-now" type="button">Sync now</button>
+      <button id="lbl-export" type="button">Export JSON</button>
+      <button id="lbl-clear" type="button" class="danger">Clear all</button>
+    </div>
+    <p class="note" id="lbl-note"></p>
+  </section>
+</main>
+<script type="module" src="/src/options/options.ts"></script>
+</body>
+</html>

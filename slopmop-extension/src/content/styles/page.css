@@ -1,0 +1,5 @@
+/* Rules injected into the LinkedIn page itself (not the shadow DOM). The hidden attribute name must match HIDDEN_ATTR in fold.ts. */
+[data-slopmop-hidden]{display:none!important}
+[data-slopmop-measure]{display:block!important;position:absolute!important;visibility:hidden!important;pointer-events:none!important}
+[data-slopmop-reveal]{animation:slopmop-fade .38s ease both}
+@keyframes slopmop-fade{from{opacity:0}to{opacity:1}}
