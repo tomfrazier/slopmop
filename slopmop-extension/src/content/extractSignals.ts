@@ -41,13 +41,28 @@ export function countFor(el: Element, word: string): number {
   return 0;
 }
 
-/** True for sponsored/promoted cards. Never analysed, sent, hidden or outlined. */
+/** An element's own text, ignoring any descendant elements' text (an icon can sit beside the word without hiding it). */
+function ownText(n: Element): string {
+  let text = "";
+  for (const child of n.childNodes) if (child.nodeType === Node.TEXT_NODE) text += child.textContent;
+  return text;
+}
+
+/**
+ * True for sponsored/promoted cards. Never analysed, sent, hidden or outlined.
+ * A post confirmed "Promoted" on the live feed (2026-09-22) was missed here: its permalink view (the only copy
+ * later reachable for debugging) didn't reproduce the feed's ad chrome, so the exact markup that slipped through
+ * is unconfirmed. Hardened defensively: the label no longer has to be a whole leaf's only content (an icon sharing
+ * its container no longer hides it, via `ownText`), and a bullet/pipe joining it to the timestamp is tolerated.
+ */
 export function isAd(el: Element): boolean {
   for (const n of el.querySelectorAll("[aria-label]")) {
     if (SEL.adAria.test(n.getAttribute("aria-label") ?? "")) return true;
   }
   for (const n of el.querySelectorAll(SEL.promotedLeaf)) {
-    if (n.childElementCount === 0 && SEL.promotedText.test(n.textContent ?? "")) return true;
+    for (const part of ownText(n).split(SEL.promotedSeparator)) {
+      if (SEL.promotedText.test(part)) return true;
+    }
   }
   return false;
 }

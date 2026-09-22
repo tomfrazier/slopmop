@@ -102,6 +102,11 @@ describe("ads are never touched", () => {
     expect(isAd(card('<div aria-label="Promoted by Acme"></div>'))).toBe(true);
     expect(isAd(card("<span>Sponsored</span>"))).toBe(true);
   });
+  it("detects Promoted sharing a container with an icon, or joined to the timestamp by a bullet", () => {
+    expect(isAd(card('<span><svg></svg>Promoted</span>'))).toBe(true);
+    expect(isAd(card("<span>Promoted · 2nd</span>"))).toBe(true);
+    expect(isAd(card("<span>3h · Promoted</span>"))).toBe(true);
+  });
   it("an ad is skipped even when it is the user's own author name", () => {
     const el = card('<svg aria-label="View Sponsored Content"></svg>', "Me Myself");
     expect(inspectPost(el, "Me Myself").status).toBe("ad");
