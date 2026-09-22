@@ -14,10 +14,11 @@ const post = (opts: { text?: string; promoted?: boolean } = {}) => {
 };
 
 describe("extractPost", () => {
-  it("still finds urn and text on the legacy markup (fallback only; counts unsupported)", () => {
+  it("still finds urn and text on the legacy markup, and the reaction count from its aria-label", () => {
     const x = extractPost(post())!;
     expect(x.urn).toBe("urn:li:activity:42");
     expect(x.text.length).toBeGreaterThan(200);
+    expect(x.engagement.reactions).toBe(1234);
   });
   it("skips promoted, short, and non-English posts", () => {
     expect(extractPost(post({ promoted: true }))).toBeNull();
@@ -46,6 +47,25 @@ describe("extractPost (current LinkedIn markup)", () => {
   });
   it("skips promoted posts", () => {
     expect(extractPost(modern({ promoted: true }))).toBeNull();
+  });
+});
+
+// A video-post layout found on a live post 2026-09-22: the reaction count renders as a bare, aria-hidden number
+// (data-test-id="social-actions__reaction-count") inside an ancestor <a aria-label="5,543 Reactions">, so no leaf's
+// own text contains the word "reactions" at all. Comments and reposts, whose leaves do carry the word, were unaffected
+// -- this is why the post's engagement was recorded as 0 reactions despite having thousands.
+describe("a reaction count that only appears in an ancestor's aria-label (no leaf text says 'reactions')", () => {
+  it("is still read correctly, and comments/reposts are unaffected", () => {
+    const el = card(`
+      <div class="details">
+        <div><a aria-label="5,543 Reactions" class="flex items-center"><span aria-hidden="true" data-test-id="social-actions__reaction-count">5,543</span></a></div>
+        <span>324 Comments</span><span>128 reposts</span>
+      </div>`);
+    expect(extractPost(el)!.engagement).toEqual({ reactions: 5543, comments: 324, reposts: 128 });
+  });
+  it("does not pick up an unrelated aria-label that happens to contain a number", () => {
+    const el = card('<div><button aria-label="Like"></button><span>16 comments</span></div>');
+    expect(extractPost(el)!.engagement).toEqual({ reactions: 0, comments: 16, reposts: 0 });
   });
 });
 
