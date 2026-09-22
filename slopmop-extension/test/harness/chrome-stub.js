@@ -23,6 +23,7 @@
   window.chrome = {
     storage: { sync: area("sync"), local: area("local"), onChanged: { addListener: (l) => listeners.push(l) } },
     runtime: {
+      id: "harness", // feed.ts's extensionAlive() checks this; without it the content script shuts itself down before scanning
       getURL: (p) => p,
       sendMessage: async (m) => {
         (window.__msgs = window.__msgs || []).push(m.type);
