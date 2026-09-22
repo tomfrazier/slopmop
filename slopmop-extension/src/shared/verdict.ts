@@ -12,5 +12,5 @@ export function verdictLabel(d: Decision & { ownLevel?: OwnLevel }, own: boolean
   if (d.level === "yellow") return { text: "Possibly slop", tone: "yellow" };
   const e = d.explain;
   if (e?.lowConfidence) return { text: "Not sure", tone: "grey" };
-  return { text: "Looks fine", tone: "grey" };
+  return { text: "Looks fine", tone: "green" };
 }

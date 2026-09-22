@@ -10,17 +10,21 @@ const view = (over: Partial<Parameters<typeof desiredView>[0]> & { level?: Decis
 };
 
 describe("what should be drawn on a post", () => {
-  it("someone else's post, no vote: outlined by score in Highlight mode, with the colour part of its identity", () => {
+  it("someone else's post, no vote: the icon shows the score's tone, with the colour part of its identity", () => {
     expect(view({ level: "red" })?.outline).toMatchObject({ key: "score:red", kind: "score" });
-    expect(view({ level: "yellow" })?.outline?.key).toBe("score:yellow"); // a different level is a different border
+    expect(view({ level: "yellow" })?.outline?.key).toBe("score:yellow"); // a different level is a different tone
     expect(view({ level: "none" })?.outline).toBeNull();
     expect(view({ level: "red" })).toMatchObject({ fold: false, refold: false });
   });
 
-  it("someone else's post, no vote: hidden in Hide mode, and ringed instead once the user unfolded it", () => {
-    expect(view({ mode: "hide", level: "red", hide: true })).toMatchObject({ fold: true, refold: false, outline: null });
-    expect(view({ mode: "hide", level: "red", hide: true, restored: true })).toMatchObject({ fold: false, refold: true });
+  it("someone else's post, no vote: hidden in Hide mode, and still ringed/tinted once the user unfolded it", () => {
+    expect(view({ mode: "hide", level: "red", hide: true })).toMatchObject({ fold: true, refold: false, outline: { key: "score:red", kind: "score" } });
+    expect(view({ mode: "hide", level: "red", hide: true, restored: true })).toMatchObject({ fold: false, refold: true, outline: { key: "score:red", kind: "score" } });
     expect(view({ mode: "hide", level: "none" })).toMatchObject({ fold: false, refold: false });
+  });
+
+  it("the icon's tone is never mode-gated: a yellow (not hidden) post still gets tinted in Hide mode", () => {
+    expect(view({ mode: "hide", level: "yellow" })).toMatchObject({ fold: false, refold: false, outline: { key: "score:yellow", kind: "score" } });
   });
 
   it("too short or not English: never acted on by the score", () => {
@@ -33,11 +37,11 @@ describe("what should be drawn on a post", () => {
     expect(view({ level: "red", vote: "no", inspectOnly: true })?.outline?.key).toBe("vote:no"); // even for short posts
   });
 
-  it("Hide mode: only 'probably' hides; 'no' and 'maybe' keep a scored-slop post visible", () => {
-    expect(view({ mode: "hide", vote: "probably" })).toMatchObject({ fold: true, outline: null });
-    expect(view({ mode: "hide", vote: "probably", restored: true })).toMatchObject({ fold: false, refold: true });
-    expect(view({ mode: "hide", level: "red", hide: true, vote: "no" })).toMatchObject({ fold: false, refold: false });
-    expect(view({ mode: "hide", level: "red", hide: true, vote: "maybe" })).toMatchObject({ fold: false });
+  it("Hide mode: only 'probably' hides; 'no' and 'maybe' keep a scored-slop post visible, all three still tinted", () => {
+    expect(view({ mode: "hide", vote: "probably" })).toMatchObject({ fold: true, outline: { key: "vote:probably", kind: "vote" } });
+    expect(view({ mode: "hide", vote: "probably", restored: true })).toMatchObject({ fold: false, refold: true, outline: { key: "vote:probably", kind: "vote" } });
+    expect(view({ mode: "hide", level: "red", hide: true, vote: "no" })).toMatchObject({ fold: false, refold: false, outline: { key: "vote:no", kind: "vote" } });
+    expect(view({ mode: "hide", level: "red", hide: true, vote: "maybe" })).toMatchObject({ fold: false, outline: { key: "vote:maybe", kind: "vote" } });
   });
 
   it("your own post: always a border (your vote, else the score's level), never folded", () => {

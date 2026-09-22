@@ -21,7 +21,12 @@
     <li>Each install can check up to 250 posts a day. Scores and your votes are also kept in this browser.</li>
     <li>You can turn Slop Mop off at any time from the toolbar icon.</li></ul></div>
   <label><input type="checkbox" id="ack" /> <span>I understand this is for research purposes only and that post text will be sent to a server for classification.</span></label>
-  <button id="go" disabled>Enable Slop Mop</button><span id="done"></span>
+  <div class="actions">
+    <button id="go" class="btn-primary" disabled>Enable Slop Mop</button>
+    <button id="openFeed" class="btn-secondary" disabled>Open LinkedIn feed →</button>
+  </div>
+  <p id="done" class="hint" aria-live="polite"></p>
+  <p id="version" class="hint"></p>
 </main>
 <script type="module" src="/src/onboarding/onboarding.ts"></script>
 </body>

@@ -2,19 +2,19 @@ import { send } from "../shared/messages";
 import type { Vote } from "../shared/types";
 import { voteHides } from "../shared/vote";
 import { ensureVerdict } from "./analysis";
-import { decisionFor, menuState } from "./decision";
+import { decisionFor, panelState } from "./decision";
+import { openVotePanel } from "./inspector";
 import { active, hooks, restored, state } from "./state";
 import type { Tracked } from "./tracked";
 import { createVoteButton } from "./voteButton";
-import { openVoteMenu } from "./voteMenu";
 import { dropVote, setVote, voteOf } from "./votes";
 
-/** Puts the mop icon beside a post's "…" menu (if it isn't there already), wired to its vote menu. */
+/** Puts the mop icon beside a post's "…" menu (if it isn't there already), wired to its panel. */
 export function ensureButton(t: Tracked) {
   if (!active() || t.vbtn?.host.isConnected) return;
   t.vbtn = createVoteButton(t.el, (button) =>
-    openVoteMenu(button, {
-      getState: () => menuState(t),
+    openVotePanel(button, {
+      getState: () => panelState(t),
       ensure: async () => void (await ensureVerdict(t)),
       onPick: (v) => castVote(t, v),
       onRefold: () => hideAgain(t),
@@ -25,8 +25,7 @@ export function ensureButton(t: Tracked) {
 
 /** Folds a post the user had unfolded back up. */
 export function hideAgain(t: Tracked) {
-  t.refold?.remove();
-  t.refold = undefined;
+  t.refolded = false;
   t.restored = false;
   restored.delete(t.urn);
   hooks.render(t);
@@ -42,7 +41,7 @@ function adjustCommunity(t: Tracked, before: Vote | null, after: Vote | null) {
   t.community = c;
 }
 
-/** Applies a vote (or clears it). Returns a message to show in the menu when it can't be recorded. */
+/** Applies a vote (or clears it). Returns a message to show in the panel when it can't be recorded. */
 export async function castVote(t: Tracked, vote: Vote | null): Promise<string | null> {
   const before = voteOf(t.urn);
   if (vote === null) {

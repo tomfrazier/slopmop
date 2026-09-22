@@ -26,7 +26,9 @@ export const SEL = {
   moreSuffix: /[\s…]*\bmore\s*$/i,
   /** Counts are rendered as leaf text like "34 reactions", "16 comments", "5 reposts". */
   countLeaf: "span,p,button,a,div",
-  promotedLeaf: "span,p,div",
+  promotedLeaf: "span,p,div,a,button",
+  /** Some layouts join the label to the timestamp with one of these ("3h · Promoted"); each side is checked on its own. */
+  promotedSeparator: /[·•|/]/,
   promotedText: /^\s*(promoted|sponsored)\s*$/i,
   /**
    * Ads: verified 2026-09-18 that a sponsored card carries an element (an svg on the creative link) with

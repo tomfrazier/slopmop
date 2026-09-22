@@ -48,7 +48,12 @@ const AD = '<svg aria-label="View Sponsored Content"></svg>';
 const tick = (ms = 40) => new Promise((r) => globalThis.setTimeout(r, ms));
 const $ = (sel: string, root: ParentNode = document) => root.querySelector(sel) as HTMLElement | null;
 const judgeMessages = () => sent.filter((m) => m.type === "judge");
-const menu = () => $("[data-slopmop-menu]")?.shadowRoot?.querySelector(".menu") as HTMLElement | undefined;
+const panel = () => $("[data-slopmop-inspector]")?.shadowRoot?.querySelector(".panel") as HTMLElement | undefined;
+/** The mop icon's tone class ("green"/"yellow"/"red"), or null when it carries no tint (nothing flagged, no vote). */
+const tone = (root: ParentNode = document) => {
+  const btn = $("[data-slopmop-vote]", root)?.shadowRoot?.querySelector("button");
+  return [...(btn?.classList ?? [])].find((c) => c.startsWith("tone-"))?.slice("tone-".length) ?? null;
+};
 
 const realMO = globalThis.MutationObserver;
 let mutationObservers: MutationObserver[] = [];
@@ -308,14 +313,14 @@ describe("the content script on LinkedIn's older post markup (your activity page
     expect(judgeMessages()).toHaveLength(1);
     const post = $("[data-urn]") as HTMLElement;
     expect($("[data-slopmop-vote]", post)).not.toBeNull();
-    expect(post.style.boxShadow).not.toBe(""); // your own posts always get a coloured border
+    expect(tone(post)).not.toBeNull(); // your own posts always get a coloured tone on the mop icon
   });
 
   it("still recognises your own post when the extension has learned the wrong name", async () => {
     mem.local.ownName = "Someone Else";
     judgeAnswer = () => verdict(0.1);
     await openFeed(rail + legacy);
-    expect(($("[data-urn]") as HTMLElement).style.boxShadow).not.toBe("");
+    expect(tone($("[data-urn]") as HTMLElement)).not.toBeNull();
   });
 
   it("does the same when the extension can't tell whose post it is (no left rail on the page)", async () => {
@@ -324,7 +329,7 @@ describe("the content script on LinkedIn's older post markup (your activity page
     const post = $("[data-urn]") as HTMLElement;
     expect($("[data-slopmop-vote]", post)).not.toBeNull();
     expect(judgeMessages()).toHaveLength(1);
-    expect(post.style.boxShadow).not.toBe(""); // its author line says "• You", so it is still treated as your own post
+    expect(tone(post)).not.toBeNull(); // its author line says "• You", so it is still treated as your own post
   });
 });
 
@@ -352,10 +357,10 @@ describe("the content script on a feed", () => {
     mem.local.manifest = { version: "a", values: {}, thresholds: { aggressive: 0.9, moderate: 0.95, mild: 0.99 }, at: Date.now(), ttlMs: 86400000 }; // so high that nothing is flagged
     await openFeed(card("t"));
     const post = () => $('[role="listitem"]') as HTMLElement;
-    expect(post().style.boxShadow).toBe(""); // not flagged under the server's thresholds
+    expect(tone(post())).toBeNull(); // not flagged under the server's thresholds
     await (globalThis as any).chrome.storage.local.set({ manifest: { version: "b", values: {}, thresholds: { aggressive: 0.1, moderate: 0.15, mild: 0.2 }, at: Date.now(), ttlMs: 86400000 } });
     await tick(60);
-    expect(post().style.boxShadow).toMatch(/217, 48, 37|d93025/i); // the server lowered them: now flagged red
+    expect(tone(post())).toBe("red"); // the server lowered them: now flagged red
   });
 
   it("checks a post, puts the vote icon beside it, and outlines it red when it reads as slop (Highlight mode)", async () => {
@@ -365,14 +370,14 @@ describe("the content script on a feed", () => {
     expect(judgeMessages()[0].text).toContain("billing migration");
     expect($("[data-slopmop-vote]")).not.toBeNull();
     const post = $('[role="listitem"]')!;
-    expect(post.style.boxShadow).toMatch(/217, 48, 37|d93025/i);
+    expect(tone(post)).toBe("red");
     expect($("[data-slopmop-fold]")).toBeNull(); // Highlight mode never hides
   });
 
   it("leaves a post that reads clean alone (no outline), but still gives it the vote icon", async () => {
     judgeAnswer = () => verdict(0.02);
     await openFeed(card("a"));
-    expect($('[role="listitem"]')!.style.boxShadow).toBe("");
+    expect(tone()).toBeNull();
     expect($("[data-slopmop-vote]")).not.toBeNull();
   });
 
@@ -417,30 +422,30 @@ describe("the content script on a feed", () => {
     await tick(60);
     expect($("[data-slopmop-fold]")).toBeNull();
     expect($("[data-slopmop-vote]")).toBeNull();
-    expect($('[role="listitem"]')!.style.boxShadow).toBe("");
+    expect(tone()).toBeNull();
   });
 
-  it("recolours an outline when a settings change moves a post from 'possibly' to 'likely'", async () => {
+  it("recolours the mop icon's tone when a settings change moves a post from 'possibly' to 'likely'", async () => {
     judgeAnswer = () => verdict(0.1); // scores between the yellow and red lines at Moderate
     await openFeed(card("a"));
     const post = $('[role="listitem"]')!;
-    expect(post.style.boxShadow).toMatch(/245, 180, 0|f5b400/i); // yellow: possibly
+    expect(tone(post)).toBe("yellow"); // possibly
     await chrome.storage.sync.set({ settings: { ...mem.sync.settings, sensitivity: "aggressive" } });
     await tick(60);
-    expect(post.style.boxShadow).toMatch(/217, 48, 37|d93025/i); // red: likely
+    expect(tone(post)).toBe("red"); // likely
   });
 
-  it("records a vote from the mop menu, and the vote replaces the score for what is shown", async () => {
+  it("records a vote from the panel, and the vote replaces the score for what is shown", async () => {
     judgeAnswer = () => verdict(0.02); // scored clean
     await openFeed(card("a"));
     ($("[data-slopmop-vote]")!.shadowRoot!.querySelector("button") as HTMLElement).click();
     await tick(60);
-    expect(menu()).toBeDefined();
-    (menu()!.querySelector('button[data-v="probably"]') as HTMLElement).click();
+    expect(panel()).toBeDefined();
+    ([...panel()!.querySelectorAll(".voterow button")].find((b) => b.textContent === "Probably") as HTMLElement).click();
     await tick(80);
     const vote = sent.find((m) => m.type === "vote");
     expect(vote.record).toMatchObject({ label: "probably", contentId: "c".repeat(32), network: "linkedin" });
-    expect($('[role="listitem"]')!.style.boxShadow).toMatch(/217, 48, 37|d93025/i); // "probably" is a red border
+    expect(tone()).toBe("red"); // "probably" tints the icon red
   });
 
   it("voting 'probably' in Hide mode hides the post", async () => {
@@ -450,18 +455,18 @@ describe("the content script on a feed", () => {
     expect($("[data-slopmop-fold]")).toBeNull();
     ($("[data-slopmop-vote]")!.shadowRoot!.querySelector("button") as HTMLElement).click();
     await tick(60);
-    (menu()!.querySelector('button[data-v="probably"]') as HTMLElement).click();
+    ([...panel()!.querySelectorAll(".voterow button")].find((b) => b.textContent === "Probably") as HTMLElement).click();
     await tick(80);
     expect($("[data-slopmop-fold]")).not.toBeNull();
   });
 
-  it("stays quiet when the server can't be reached, and doesn't outline or fold", async () => {
+  it("stays quiet when the server can't be reached, and doesn't tint the icon or fold", async () => {
     judgeAnswer = () => null;
     mem.sync.settings.mode = "hide";
     await openFeed(card("a"));
     expect($("[data-slopmop-fold]")).toBeNull();
-    expect($('[role="listitem"]')!.style.boxShadow).toBe("");
-    expect($("[data-slopmop-vote]")).not.toBeNull(); // you can still open the menu
+    expect(tone()).toBeNull();
+    expect($("[data-slopmop-vote]")).not.toBeNull(); // you can still open the panel
   });
 
   it("tells the extension how many posts it has seen (for the debug counters)", async () => {

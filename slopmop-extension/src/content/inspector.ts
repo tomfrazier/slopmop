@@ -1,6 +1,9 @@
 import { style } from "../shared/dom";
+import type { Vote } from "../shared/types";
 import type { InspectData } from "./inspectData";
-import { buildPanel } from "./inspectorPanel";
+import { buildPanel, buildScoringPanel } from "./inspectorPanel";
+import { closeOnDismissal } from "./panelDismissal";
+import type { PanelOpts } from "./votePanelTypes";
 import TOKENS from "../shared/tokens.css?inline";
 import CSS from "./styles/inspector.css?inline";
 
@@ -24,16 +27,16 @@ function ensureHost(): ShadowRoot {
   return root;
 }
 
-function close() {
+function closePanel() {
   clearTimeout(showTimer);
   panel?.remove();
   panel = null;
 }
-// The panel is a tooltip (pointer-events: none), so it can never catch a click meant for the post or its tabs.
+// The tooltip variant is a tooltip (pointer-events: none), so it can never catch a click meant for the post or its tabs.
 const scheduleClose = () => {
   clearTimeout(showTimer);
   clearTimeout(hideTimer);
-  hideTimer = window.setTimeout(close, 60);
+  hideTimer = window.setTimeout(closePanel, 60);
 };
 const cancelClose = () => clearTimeout(hideTimer);
 
@@ -151,12 +154,11 @@ export function bindInspector(target: Element, get: () => InspectData | null) {
 
 export function closeInspector() {
   current = null;
-  close();
+  closePanel();
   demote();
 }
 
-
-/** Shows the breakdown beside `anchor` (the mop menu). Used by the menu's "Details" item; hide with closeInspector(). */
+/** Shows the breakdown beside `anchor`. Used by the fold strip's hover tooltip; hide with closeInspector(). */
 export function showInspectorBeside(anchor: Element, data: InspectData) {
   if (!data.decision.explain) return;
   cancelClose();
@@ -191,4 +193,57 @@ export function showNotice(anchor: Element, dialog: Element, title: string, body
   el.append(h5, p);
   r.append(el);
   place(el);
+}
+
+/* ---------------- The click-triggered panel under the mop icon ---------------- */
+
+let votePanel: { anchor: HTMLElement; close: () => void } | null = null;
+
+export function closeVotePanel() {
+  votePanel?.close();
+}
+
+/** Opens the merged score-and-vote panel under the mop icon. Stays open (repainting) through a vote, until dismissed. */
+export function openVotePanel(anchor: HTMLElement, opts: PanelOpts): void {
+  if (votePanel?.anchor === anchor) return closeVotePanel(); // clicking the icon again closes it
+  closeVotePanel();
+  closeInspector();
+
+  current = { anchor, get: () => opts.getState().inspect };
+  let stopDismissal = () => {};
+  let lastError: string | null = null;
+
+  const close = (refocus: boolean) => {
+    stopDismissal();
+    votePanel = null;
+    current = null;
+    closePanel();
+    demote();
+    if (refocus) anchor.focus();
+  };
+
+  const pick = async (v: Vote | null) => {
+    lastError = await opts.onPick(v).catch(() => "Something went wrong saving that vote.");
+    paint();
+  };
+
+  const paint = () => {
+    if (!current) return;
+    const s = opts.getState();
+    const r = ensureHost();
+    panel?.remove();
+    panel = s.inspect
+      ? buildPanel(s.inspect, { current: s.current, onPick: (v) => void pick(v), canRefold: s.canRefold, onRefold: () => (close(false), opts.onRefold()), error: lastError })
+      : buildScoringPanel(s);
+    r.append(panel);
+    place(panel);
+    stopDismissal();
+    stopDismissal = closeOnDismissal(panel, anchor, (e) => e.key === "Escape" && close(true), close);
+  };
+
+  paint();
+  votePanel = { anchor, close: () => close(false) };
+
+  const s0 = opts.getState();
+  if (!s0.inspect && !s0.problem) void opts.ensure().then(paint); // short / non-English posts aren't scored until asked
 }

@@ -1,10 +1,12 @@
 import { build } from "vite";
-import { cpSync, mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { deflateSync } from "node:zlib";
 
 const root = resolve(import.meta.dirname, "..");
 const dist = resolve(root, "dist");
+// One source of truth for the version: package.json (bump it there; the onboarding page and the manifest both read from it).
+const { version } = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
 const serverUrl = process.env.SLOPMOP_SERVER_URL ?? "http://localhost:8787";
 // Developer-only vote collector (`npm run collect`); empty = not built in, no permission requested.
 const collectorUrl = process.env.SLOPMOP_COLLECTOR_URL ?? "";
@@ -71,7 +73,7 @@ const origin = new URL(serverUrl).origin + "/*";
 writeFileSync(resolve(dist, "manifest.json"), JSON.stringify({
   manifest_version: 3,
   name: "Slop Mop",
-  version: "0.1.0",
+  version,
   description: "Mop the slop out of your LinkedIn feed. Folds or highlights low-value posts and shows why. Not an AI detector.",
   icons: { 16: "icons/16.png", 32: "icons/32.png", 48: "icons/48.png", 128: "icons/128.png" },
   action: { default_title: "Slop Mop", default_popup: "popup.html", default_icon: { 16: "icons/16.png", 32: "icons/32.png" } },

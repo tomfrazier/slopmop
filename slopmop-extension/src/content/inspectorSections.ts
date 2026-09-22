@@ -2,11 +2,14 @@ import { displayScore, displayZones } from "../shared/display";
 import { live } from "../shared/manifest";
 import { PALETTE } from "../shared/palette";
 import { h } from "../shared/dom";
-import type { Explain } from "../shared/types";
+import type { Community, Explain } from "../shared/types";
 import type { VerdictTone } from "../shared/verdict";
-import { VOTE_COLOR, VOTE_NAME } from "../shared/vote";
+import { TONE_DARK, TONE_STYLE } from "../shared/verdictStyle";
+import { VOTE_NAME, voteLevel } from "../shared/vote";
+import type { Vote } from "../shared/types";
 import type { InspectData } from "./inspectData";
-import { bar, pct, tellLabel, TONE_COLOR } from "./inspectorFormat";
+import { bar, tellLabel } from "./inspectorFormat";
+import type { VoteCtx } from "./votePanelTypes";
 
 // ---- what counts as strong ----
 /** A tell at or above this is a "strong sign". Lower for a post that was flagged anyway. */
@@ -14,31 +17,78 @@ const MAX_NAMED_SIGNS = 3;
 
 /** A full bar, as a percentage. */
 const FULL_BAR_PCT = 100;
-/** The plain verdict and the one sentence that says why. */
-export function verdictHeader(data: InspectData, e: Explain, verdict: { text: string; tone: VerdictTone }) {
-  const draftNote = data.draft
-    ? h("div", { class: "banner" }, h("b", {}, "Draft. "), "Not posted yet, so it's scored on the writing alone, with no reader response.", typeof data.draft === "object" ? ` This used one check (${data.draft.used} of ${data.draft.limit} today).` : "")
-    : null;
-  const banner = data.vote
-    ? h("div", { class: "banner" }, "You voted ", h("b", { style: `color:${VOTE_COLOR[data.vote]}` }, VOTE_NAME[data.vote]), " on this post. Your vote overrides the score for what is shown; use the mop icon to change it.")
-    : null;
-  return [draftNote, banner, h("div", { class: "head" }, h("span", { class: "pill", style: `background:${TONE_COLOR[verdict.tone]}` }, verdict.text), h("p", { class: "outcome" }, e.outcome))];
+
+/** "<X> / 100", above the chip and at least as prominent: the number leads the panel. */
+export function scoreHeader(score: number) {
+  return h("div", { class: "scorehead" }, h("span", { class: "num" }, String(Math.round(score))), h("span", { class: "of" }, " / 100"));
+}
+
+const VOTE_OPTIONS: { v: Vote | null; label: string }[] = [
+  { v: null, label: "Not sure" },
+  { v: "no", label: "No" },
+  { v: "maybe", label: "Maybe" },
+  { v: "probably", label: "Probably" },
+];
+
+/** The 4-state "Is this post slop?" row: Not sure / No / Maybe / Probably, coloured to match the verdict scale once picked. */
+export function voteRow(ctx: VoteCtx): HTMLElement {
+  const group = h(
+    "div",
+    { class: "voterow", role: "radiogroup", "aria-label": "Is this post slop?" },
+    ...VOTE_OPTIONS.map(({ v, label }) => {
+      const on = ctx.current === v;
+      const tone: VerdictTone = v ? voteLevel(v) : "grey";
+      const st = TONE_STYLE[tone];
+      const btn = h("button", { type: "button", role: "radio", "aria-checked": String(on), style: on ? `background:${st.bg};color:${st.text};border-color:${st.border}` : "" }, label) as HTMLButtonElement;
+      btn.addEventListener("click", () => ctx.onPick(v));
+      return btn;
+    }),
+  );
+  return ctx.error ? (h("div", { class: "voterow-wrap" }, group, h("div", { class: "err" }, ctx.error)) as HTMLElement) : group;
+}
+
+/**
+ * The chip, its reason, and (when interactive) the vote label and row — all one group, so "what Jev called it" and "what you
+ * called it" read together instead of a vote banner floating above the chip while the actual controls sit further down.
+ * Once you've voted, the chip and its sentence dim and strike through: Jev's call is still shown, but visibly superseded.
+ */
+export function verdictBlock(data: InspectData, e: Explain, verdict: { text: string; tone: VerdictTone }, vote?: VoteCtx): HTMLElement[] {
+  const activeVote = vote ? vote.current : data.vote;
+  const overridden = !!activeVote;
+  const st = TONE_STYLE[verdict.tone];
+  const head = h(
+    "div",
+    { class: "head" },
+    h("span", { class: overridden ? "pill overridden" : "pill", style: `background:${st.bg};color:${st.text};border:1px solid ${st.border}` }, verdict.text),
+    h("p", { class: overridden ? "outcome overridden" : "outcome" }, e.outcome),
+  );
+  const rows: HTMLElement[] = [head];
+  if (vote) {
+    rows.push(h("div", { class: "votelabel" }, "Is this slop?"));
+    rows.push(voteRow(vote));
+  }
+  if (overridden) {
+    rows.push(h("p", { class: "overridenote" }, vote ? "Your vote overrides Jev's call above." : `You voted ${VOTE_NAME[activeVote]}. Your vote overrides the score for what is shown.`));
+  }
+  return rows;
 }
 
 /**
  * Looks fine / Possibly / Likely, with the post's place on it. The three zones are the same in both modes; in Hide mode a
- * line marks where posts get hidden. If the post sits past a line but wasn't flagged (it reads as person-written, or Jev
- * wasn't sure), the bar is dimmed and says so, so the marker isn't read as a verdict.
+ * line marks where posts get hidden. A vote moves the dot to the middle of its own zone and recolours it to match; with no
+ * vote the dot sits at the raw score in the neutral colour. If the post sits past a line but wasn't flagged (it reads as
+ * person-written, or Jev wasn't sure), the bar is dimmed and says so, so the marker isn't read as a verdict.
  */
-export function scoreZones(data: InspectData, e: Explain, score: number) {
-  // The bar is the shown 0-100 scale. Its lines are this sensitivity's cutoffs, drawn where they fall on that scale, so the
-  // post's number is the same at every sensitivity and only the cutoffs move.
+export function scoreZones(data: InspectData, e: Explain, score: number, vote: Vote | null) {
   const zone = displayZones(e);
   const possibly = `${zone.possibly}%`;
   const likely = `${zone.likely}%`;
-  const pos = (raw: number) => `${Math.min(FULL_BAR_PCT, displayScore(raw))}%`;
   const hides = data.mode === "hide" && !data.own;
   const blocked = data.decision.level === "none" && score >= e.yellowAt;
+  const voteTone: VerdictTone | null = vote ? voteLevel(vote) : null;
+  const dotLeft =
+    voteTone === "green" ? zone.possibly / 2 : voteTone === "yellow" ? (zone.possibly + zone.likely) / 2 : voteTone === "red" ? (zone.likely + 100) / 2 : Math.min(FULL_BAR_PCT, displayScore(score));
+  const dotColor = voteTone ? TONE_DARK[voteTone] : "var(--ink-900)";
   const zones = h(
     "div",
     { class: blocked ? "zones blocked" : "zones" },
@@ -46,15 +96,11 @@ export function scoreZones(data: InspectData, e: Explain, score: number) {
     h("i", { style: `width:calc(${likely} - ${possibly});background:${PALETTE.mop200}` }),
     h("i", { style: `flex:1;background:${PALETTE.red200}` }),
     ...(hides ? [h("div", { class: "cut", style: `left:${likely}`, title: "Posts past this line are hidden" })] : []),
-    h("div", { class: "dot", style: `left:${pos(score)}` }),
+    h("div", { class: "dot", style: `left:${Math.min(100, Math.max(0, dotLeft))}%;background:${dotColor}` }),
   );
-  const labels = h(
-    "div",
-    { class: "zlabels" },
-    h("span", { style: `width:${possibly}` }, "Looks fine"),
-    h("span", { style: `width:calc(${likely} - ${possibly})` }, "Possibly"),
-    h("span", { style: "flex:1" }, hides ? "Likely (hidden)" : "Likely"),
-  );
+  // Laid out as three natural-width labels (start / centre / end), never sized to their own zone's width, so a narrow
+  // zone (aggressive sensitivities can squeeze "Possibly" down a great deal) never clips its label against the panel edge.
+  const labels = h("div", { class: "zlabels" }, h("span", { class: "zl start" }, "Looks fine"), h("span", { class: "zl mid" }, "Possibly"), h("span", { class: "zl end" }, hides ? "Likely (hidden)" : "Likely"));
   return [zones, labels, ...(blocked ? [h("p", { class: "note" }, "The score is past a line, but this post isn't flagged: see the note above.")] : [])];
 }
 
@@ -66,4 +112,11 @@ export function strongestSigns(data: InspectData, e: Explain) {
   return named.length ? h("p", { class: "signals" }, "Strongest signs: ", h("b", {}, named.join(", "))) : h("p", { class: "signals" }, "No strong signs of AI writing.");
 }
 
-export const personBar = (label: string, val: number) => [h("span", { class: "n" }, label), bar(val, PALETTE.blue500), h("span", { class: "num" }, pct(val))];
+/** A counter-signal bar with no trailing percentage (the bar itself is the number). */
+export const personBar = (label: string, val: number) => [h("span", { class: "n" }, label), bar(val, PALETTE.blue500)];
+
+/** "3 flagged as slop · 1 maybe · 2 no", low-priority at the very bottom (most posts have none). */
+export function communityLine(c: Community | null | undefined): HTMLElement {
+  if (!c || c.total === 0) return h("div", { class: "community" }, "No community votes yet");
+  return h("div", { class: "community" }, `${c.probably} flagged as slop · ${c.maybe} maybe · ${c.no} no`);
+}

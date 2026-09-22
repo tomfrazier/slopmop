@@ -82,8 +82,12 @@ function onActivate(el: HTMLElement, action: () => void) {
   });
 }
 
-/** Inserts a folded-paper strip before `post` and hides the post. Click/Enter unfolds and restores it. */
-export function fold(post: HTMLElement, d: Decision, stats: StatsReply | null, onRestore: () => void, inspect?: () => InspectData | null): Fold {
+/**
+ * Inserts a folded-paper strip before `post` and hides the post. Click/Enter unfolds and restores it.
+ * Null if `post` has no parent to insert before (detached from the page): never hides a post with nothing in its place.
+ */
+export function fold(post: HTMLElement, d: Decision, stats: StatsReply | null, onRestore: () => void, inspect?: () => InspectData | null): Fold | null {
+  if (!post.parentElement) return null;
   ensurePageCss();
   const host = document.createElement("div");
   host.setAttribute("data-slopmop-fold", "");
@@ -92,7 +96,7 @@ export function fold(post: HTMLElement, d: Decision, stats: StatsReply | null, o
   const wrap = buildStrip(statsEl);
   host.attachShadow({ mode: "open" }).append(style(TOKENS + CSS), wrap);
   // Insert and hide only once the strip is fully built, so a failure can never leave a post hidden with nothing in its place.
-  post.parentElement?.insertBefore(host, post);
+  post.parentElement.insertBefore(host, post);
   post.setAttribute(HIDDEN_ATTR, "");
   if (inspect) bindInspector(wrap, inspect);
 

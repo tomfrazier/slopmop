@@ -2,7 +2,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { voteHides, voteLevel } from "../src/shared/vote";
 import { createVoteButton } from "../src/content/voteButton";
-import { closeVoteMenu, openVoteMenu, type MenuOpts, type MenuState } from "../src/content/voteMenu";
+import { closeVotePanel, openVotePanel } from "../src/content/inspector";
+import type { PanelOpts, PanelState } from "../src/content/votePanelTypes";
 import type { InspectData } from "../src/content/inspector";
 import { decide } from "../src/shared/decide";
 import { dropVote, loadVotes, voteOf, watchVotes } from "../src/content/votes";
@@ -22,8 +23,8 @@ const post = (withMenu = true) => {
   }<button aria-label="Hide post by Someone">x</button></div></div></div>`;
   return document.getElementById("post") as HTMLElement;
 };
-const menuRoot = () => document.querySelector("[data-slopmop-menu]")?.shadowRoot ?? null;
-const items = () => [...(menuRoot()?.querySelectorAll<HTMLButtonElement>("button") ?? [])];
+const panelRoot = () => document.querySelector("[data-slopmop-inspector]")?.shadowRoot ?? null;
+const panelOf = () => (panelRoot()?.querySelector(".panel") ?? null) as HTMLElement | null;
 const rec = (urn: string, label: string) => ({ urn, label, at: 1, text: "t", own: false, engagement: { reactions: 0, comments: 0, reposts: 0 }, verdict: { model: "t", aiLikelihood: 0.9, dimensions: {} }, decided: {} });
 
 describe("vote model", () => {
@@ -60,7 +61,7 @@ describe("mop button", () => {
     expect(btn.host.parentElement).toBe(p);
     expect(btn.host.style.position).toBe("absolute");
   });
-  it("opens the menu on click without letting LinkedIn see the click", () => {
+  it("opens the panel on click without letting LinkedIn see the click", () => {
     const p = post();
     const onOpen = vi.fn();
     const btn = createVoteButton(p, onOpen);
@@ -71,14 +72,15 @@ describe("mop button", () => {
     expect(outer).not.toHaveBeenCalled();
     document.removeEventListener("click", outer);
   });
-  it("shows the current vote on the icon and in its label", () => {
+  it("shows the current vote in its label, and a tone class dims/tints the icon", () => {
     const btn = createVoteButton(post(), () => {});
     expect(btn.button.getAttribute("aria-label")).toMatch(/is this post slop/);
     btn.setVote("probably");
     expect(btn.button.getAttribute("aria-label")).toMatch(/Probably/);
-    expect(btn.button.querySelector("rect")!.getAttribute("fill")).toBe("#D93025");
-    btn.setVote(null);
-    expect(btn.button.querySelector("rect")!.getAttribute("fill")).toBe("#6E757D");
+    btn.setTone("red");
+    expect(btn.button.classList.contains("tone-red")).toBe(true);
+    btn.setTone(null);
+    expect(btn.button.className).toBe("");
   });
   it("can be removed", () => {
     const btn = createVoteButton(post(), () => {});
@@ -87,10 +89,10 @@ describe("mop button", () => {
   });
 });
 
-describe("vote menu", () => {
+describe("vote panel", () => {
   let anchor: HTMLElement;
   beforeEach(() => {
-    closeVoteMenu();
+    closeVotePanel();
     document.body.innerHTML = '<button id="a">mop</button>';
     anchor = document.getElementById("a")!;
   });
@@ -99,165 +101,139 @@ describe("vote menu", () => {
     const dims = Object.fromEntries(["contrastFraming", "emptyEvaluation", "tradeoffFreePromises", "formalHedging", "hypeMarketing", "manneredProse", "formulaicHook", "manufacturedNarrative", "engagementBait", "humanVoice", "usefulness"].map((k) => [k, { value: score, confidence: 0.9 }]));
     const response = { model: "t", aiLikelihood: 0.9, dimensions: dims };
     const engagement = { reactions: 0, comments: 0, reposts: 0 };
-    return { urn: "u", text: "t", own: false, engagement, response, decision: decide(response, engagement, "hide", "moderate"), mode: "hide", sensitivity: "moderate", vote: null };
+    return { urn: "u", text: "t", own: false, engagement, response, decision: decide(response, engagement, "hide", "moderate"), mode: "hide", sensitivity: "moderate", vote: null, community: { no: 2, maybe: 1, probably: 3, total: 6 } };
   };
-  const state = (over: Partial<MenuState> = {}): MenuState => ({ current: null, score: 38, verdict: "Not flagged", tone: "grey", zones: { possibly: 40, likely: 70 }, scoring: false, problem: null, inspect: inspect(), canRefold: false, community: null, ...over });
-  const opts = (over: Partial<MenuState> = {}, extra: Partial<MenuOpts> = {}): MenuOpts => ({
+  const state = (over: Partial<PanelState> = {}): PanelState => ({ current: null, inspect: inspect(), scoring: false, problem: null, canRefold: false, ...over });
+  const opts = (over: Partial<PanelState> = {}, extra: Partial<PanelOpts> = {}): PanelOpts => ({
     getState: () => state(over),
     ensure: async () => {},
     onPick: async () => null,
     onRefold: () => {},
     ...extra,
   });
-  const box = () => menuRoot()!.querySelector(".menu") as HTMLElement;
-  const texts = () => [...box().children].map((c) => (c.tagName === "HR" ? "---" : (c.textContent ?? "").replace(/\s+/g, " ").trim()));
-  const panelOpen = () => !!document.querySelector("[data-slopmop-inspector]")?.shadowRoot?.querySelector(".panel");
+  const voteBtn = (label: string) => [...panelOf()!.querySelectorAll('.voterow button')].find((b) => b.textContent === label) as HTMLButtonElement;
 
-  it("leads with the verdict, then the score, then the votes, then a separator and Details last", () => {
-    openVoteMenu(anchor, opts({ score: 38, verdict: "Not flagged" }));
-    const t = texts();
-    expect(t[0]).toBe("Not flaggedSlop score38"); // the word first, the number as supporting detail
-    expect(t[1]).toBe("---");
-    expect(t.slice(2, 6)).toEqual(["Is this post slop?", "Nonot slop", "Maybeborderline", "Probablyslop"]);
-    expect(t[t.length - 2]).toBe("---");
-    expect(t[t.length - 1]).toMatch(/^Details/);
-  });
-  it("shows what the community has said under the score, or that nobody has yet", () => {
-    openVoteMenu(anchor, opts({ community: { no: 2, maybe: 1, probably: 3, total: 6 } }));
-    expect(box().querySelector(".community")!.textContent).toBe("Community: 3 flagged as slop · 1 maybe · 2 no");
-    closeVoteMenu();
-    openVoteMenu(anchor, opts({ community: { no: 0, maybe: 0, probably: 0, total: 0 } }));
-    expect(box().querySelector(".community")!.textContent).toBe("No community votes yet");
-    closeVoteMenu();
-    openVoteMenu(anchor, opts({ community: null }));
-    expect(box().querySelector(".community")).toBeNull();
-  });
-  it("draws the meter's zones where this person's sensitivity puts them, not at fixed places", () => {
-    openVoteMenu(anchor, opts({ score: 36, verdict: "Possibly slop", tone: "yellow", zones: { possibly: 22, likely: 38 } }));
-    const bands = [...box().querySelectorAll(".score .meter i")].map((i) => (i as HTMLElement).style.width);
-    expect(bands[0]).toBe("22%");
-    expect(bands[1]).toBe("16%");
+  it("shows the score above the chip, then the vote row, then the range bar", () => {
+    openVotePanel(anchor, opts());
+    const panel = panelOf()!;
+    expect(panel.querySelector(".scorehead")!.textContent).toMatch(/\/ 100/);
+    const order = [...panel.children].map((c) => c.className);
+    expect(order.indexOf("scorehead")).toBeLessThan(order.indexOf("head"));
+    expect(order.indexOf("voterow")).toBeLessThan(order.indexOf("zones"));
   });
 
-  it("draws a meter with a marker at the shown score, and no '/100'", () => {
-    openVoteMenu(anchor, opts({ score: 62, verdict: "Possibly slop", tone: "yellow" }));
-    const meter = box().querySelector(".score .meter")!;
-    expect(meter.getAttribute("aria-label")).toBe("Slop score 62 out of 100");
-    expect((meter.querySelector("b") as HTMLElement).style.left).toBe("62%");
-    expect(box().querySelector(".score")!.textContent).not.toMatch(/\/100/);
+  it("labels the vote row so it reads as an action, not decoration", () => {
+    openVotePanel(anchor, opts());
+    expect(panelOf()!.querySelector(".votelabel")!.textContent).toBe("Is this slop?");
   });
 
-  it("shows Scoring... first for an unscored post and fills the score in when it arrives", async () => {
+  it("dims and strikes the chip once a vote overrides it, and says so; a plain 'Not sure' does neither", () => {
+    openVotePanel(anchor, opts({ current: "maybe" }));
+    const panel = panelOf()!;
+    expect(panel.querySelector(".pill")!.className).toMatch(/overridden/);
+    expect(panel.querySelector(".outcome")!.className).toMatch(/overridden/);
+    expect(panel.querySelector(".overridenote")!.textContent).toMatch(/overrides Jev's call/);
+    closeVotePanel();
+    openVotePanel(anchor, opts({ current: null }));
+    const panel2 = panelOf()!;
+    expect(panel2.querySelector(".pill")!.className).not.toMatch(/overridden/);
+    expect(panel2.querySelector(".overridenote")).toBeNull();
+  });
+
+  it("keeps the chip, its reason, the vote label and the vote row together as one group, not split by a floating banner", () => {
+    openVotePanel(anchor, opts({ current: "maybe" }));
+    const order = [...panelOf()!.children].map((c) => c.className);
+    const head = order.indexOf("head");
+    expect(order[head + 1]).toBe("votelabel");
+    expect(order[head + 2]).toBe("voterow");
+    expect(order[head + 3]).toBe("overridenote");
+  });
+
+  it("puts 'Hide post again' near community votes at the bottom, not inside the vote group", () => {
+    openVotePanel(anchor, opts({ canRefold: true }));
+    const order = [...panelOf()!.children].map((c) => c.className);
+    expect(order.indexOf("quiet-link")).toBeGreaterThan(order.indexOf("counterbars"));
+    expect(order.indexOf("quiet-link")).toBeLessThan(order.indexOf("community"));
+  });
+
+  it("shows what the community has said at the very bottom", () => {
+    openVotePanel(anchor, opts());
+    expect(panelOf()!.querySelector(".community")!.textContent).toBe("3 flagged as slop · 1 maybe · 2 no");
+    closeVotePanel();
+    openVotePanel(anchor, opts({ inspect: { ...inspect(), community: { no: 0, maybe: 0, probably: 0, total: 0 } } }));
+    expect(panelOf()!.querySelector(".community")!.textContent).toBe("No community votes yet");
+  });
+
+  it("shows a scoring placeholder for an unscored post and fills the panel in when it arrives", async () => {
     let scored = false;
     let release = () => {};
     const gate = new Promise<void>((r) => (release = r));
-    openVoteMenu(anchor, {
-      getState: () => (scored ? state({ score: 57, verdict: "Likely slop", tone: "red" }) : state({ score: null, scoring: true, inspect: null })),
+    openVotePanel(anchor, {
+      getState: () => (scored ? state({}) : state({ inspect: null, scoring: true })),
       ensure: async () => (await gate, void (scored = true)),
       onPick: async () => null,
       onRefold: () => {},
     });
-    // While it is pending: three animated dots (not a static ellipsis), labelled for screen readers.
-    const dots = box().querySelector(".score .dots")!;
-    expect(dots.querySelectorAll("i")).toHaveLength(3);
-    expect(dots.getAttribute("aria-label")).toBe("Scoring");
-    expect(box().querySelector(".score .v")).toBeNull();
+    expect(panelOf()!.querySelector(".dots")).not.toBeNull();
     release();
-    await vi.waitFor(() => expect(box().querySelector(".score")!.textContent).toMatch(/Likely slop.*57/));
-    expect(box().querySelector(".score .dots")).toBeNull();
-    expect(box().querySelector(".details, [aria-haspopup=true]")!.getAttribute("aria-disabled")).toBe("false");
+    await vi.waitFor(() => expect(panelOf()!.querySelector(".voterow")).not.toBeNull());
   });
   it("says why when a post could not be scored", () => {
-    openVoteMenu(anchor, opts({ score: null, problem: "Couldn't score this post. server 502", inspect: null }));
-    expect(box().querySelector(".score")!.textContent).toMatch(/server 502/);
-    expect(box().querySelector("[aria-haspopup=true]")!.getAttribute("aria-disabled")).toBe("true");
-  });
-  it("Details shows the analysis card on hover and hides it on leave (it is not a click action)", () => {
-    openVoteMenu(anchor, opts());
-    const details = box().querySelector("[aria-haspopup=true]") as HTMLElement;
-    expect(panelOpen()).toBe(false);
-    details.dispatchEvent(new MouseEvent("mouseenter"));
-    expect(panelOpen()).toBe(true);
-    details.dispatchEvent(new MouseEvent("mouseleave"));
-    expect(panelOpen()).toBe(false);
-  });
-  it("Details also opens on keyboard focus, and does nothing while the post is unscored", () => {
-    openVoteMenu(anchor, opts());
-    const details = box().querySelector("[aria-haspopup=true]") as HTMLElement;
-    details.dispatchEvent(new FocusEvent("focus"));
-    expect(panelOpen()).toBe(true);
-    details.dispatchEvent(new FocusEvent("blur"));
-    closeVoteMenu();
-    openVoteMenu(anchor, opts({ score: null, inspect: null }));
-    (box().querySelector("[aria-haspopup=true]") as HTMLElement).dispatchEvent(new MouseEvent("mouseenter"));
-    expect(panelOpen()).toBe(false);
-  });
-  it("closing the menu also dismisses the analysis card", () => {
-    openVoteMenu(anchor, opts());
-    (box().querySelector("[aria-haspopup=true]") as HTMLElement).dispatchEvent(new MouseEvent("mouseenter"));
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(panelOpen()).toBe(false);
+    openVotePanel(anchor, opts({ inspect: null, problem: "Couldn't score this post. server 502" }));
+    expect(panelOf()!.textContent).toMatch(/server 502/);
   });
   it("offers 'Hide post again' only for a post you unfolded, and it calls onRefold", () => {
-    openVoteMenu(anchor, opts({ canRefold: false }));
-    expect(texts().join("|")).not.toMatch(/Hide post again/);
-    closeVoteMenu();
+    openVotePanel(anchor, opts({ canRefold: false }));
+    expect(panelOf()!.querySelector(".quiet-link")).toBeNull();
+    closeVotePanel();
     const onRefold = vi.fn();
-    openVoteMenu(anchor, opts({ canRefold: true }, { onRefold }));
-    const item = [...box().querySelectorAll("button")].find((b) => b.textContent === "Hide post again")!;
-    item.click();
+    openVotePanel(anchor, opts({ canRefold: true }, { onRefold }));
+    (panelOf()!.querySelector(".quiet-link") as HTMLElement).click();
     expect(onRefold).toHaveBeenCalled();
-    expect(menuRoot()!.querySelector(".menu")).toBeNull();
+    expect(panelOf()).toBeNull();
   });
-  it("Details stays last, after a separator, even when 'Clear my vote' and 'Hide post again' are present", () => {
-    openVoteMenu(anchor, opts({ current: "maybe", canRefold: true }));
-    const t = texts().filter((x) => x !== ""); // drop the empty error line
-    expect(t.slice(-4)).toEqual(["Clear my vote", "Hide post again", "---", "Details‹"]);
-  });
-  it("picking an item reports that vote and closes", async () => {
+  it("picking a segment reports that vote and stays open, recolouring the row", async () => {
     const onPick = vi.fn(async () => null);
-    openVoteMenu(anchor, opts({}, { onPick }));
-    (box().querySelector('[data-v="maybe"]') as HTMLElement).click();
+    openVotePanel(anchor, opts({}, { onPick }));
+    voteBtn("Maybe").click();
     await vi.waitFor(() => expect(onPick).toHaveBeenCalledWith("maybe"));
-    await vi.waitFor(() => expect(menuRoot()!.querySelector(".menu")).toBeNull());
+    expect(panelOf()).not.toBeNull(); // stays open, unlike the old menu
   });
-  it("picking your current vote again clears it; 'Clear my vote' does too", async () => {
+  it("picking your current vote's segment clears it back to Not sure", async () => {
     const onPick = vi.fn(async () => null);
-    openVoteMenu(anchor, opts({ current: "probably" }, { onPick }));
-    (box().querySelector('[data-v="probably"]') as HTMLElement).click();
+    openVotePanel(anchor, opts({ current: "probably" }, { onPick }));
+    voteBtn("Not sure").click();
     await vi.waitFor(() => expect(onPick).toHaveBeenCalledWith(null));
   });
-  it("marks the current vote", () => {
-    openVoteMenu(anchor, opts({ current: "no" }));
-    expect(box().querySelector('[data-v="no"]')!.getAttribute("aria-checked")).toBe("true");
-    expect(box().querySelector('[data-v="maybe"]')!.getAttribute("aria-checked")).toBe("false");
+  it("marks the current vote's segment checked", () => {
+    openVotePanel(anchor, opts({ current: "no" }));
+    expect(voteBtn("No").getAttribute("aria-checked")).toBe("true");
+    expect(voteBtn("Not sure").getAttribute("aria-checked")).toBe("false");
   });
-  it("stays open and shows the problem when the vote can't be saved", async () => {
-    openVoteMenu(anchor, opts({}, { onPick: async () => "Couldn't score this post." }));
-    (box().querySelector('[data-v="no"]') as HTMLElement).click();
-    await vi.waitFor(() => expect(menuRoot()!.querySelector(".err-msg")!.textContent).toBe("Couldn't score this post."));
-    expect(menuRoot()!.querySelector(".menu")).not.toBeNull();
-    expect((box().querySelector('[data-v="no"]') as HTMLButtonElement).disabled).toBe(false);
+  it("shows the problem and stays open when the vote can't be saved", async () => {
+    openVotePanel(anchor, opts({}, { onPick: async () => "Couldn't score this post." }));
+    voteBtn("No").click();
+    await vi.waitFor(() => expect(panelOf()!.querySelector(".err")!.textContent).toBe("Couldn't score this post."));
   });
   it("closes on Escape, on an outside press, and when the icon is pressed again", () => {
-    openVoteMenu(anchor, opts());
+    openVotePanel(anchor, opts());
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(menuRoot()!.querySelector(".menu")).toBeNull();
+    expect(panelOf()).toBeNull();
 
-    openVoteMenu(anchor, opts());
+    openVotePanel(anchor, opts());
     document.body.dispatchEvent(new Event("pointerdown", { bubbles: true, composed: true }));
-    expect(menuRoot()!.querySelector(".menu")).toBeNull();
+    expect(panelOf()).toBeNull();
 
-    openVoteMenu(anchor, opts());
-    openVoteMenu(anchor, opts()); // second press on the same icon
-    expect(menuRoot()!.querySelector(".menu")).toBeNull();
+    openVotePanel(anchor, opts());
+    openVotePanel(anchor, opts()); // second press on the same icon
+    expect(panelOf()).toBeNull();
   });
-  it("only ever has one menu open", () => {
+  it("only ever has one panel open", () => {
     const other = document.createElement("button");
     document.body.append(other);
-    openVoteMenu(anchor, opts());
-    openVoteMenu(other, opts());
-    expect(menuRoot()!.querySelectorAll(".menu")).toHaveLength(1);
+    openVotePanel(anchor, opts());
+    openVotePanel(other, opts());
+    expect(panelRoot()!.querySelectorAll(".panel")).toHaveLength(1);
   });
 });
 

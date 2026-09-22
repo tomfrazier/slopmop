@@ -2,26 +2,51 @@
 *{box-sizing:border-box}
 .panel.notice{width:260px;padding:var(--space-5) var(--space-6)}
 .notice h4{margin:0 0 var(--space-2)}
-.panel{pointer-events:none;position:fixed;z-index:2147483000;width:340px;max-width:calc(100vw - 16px);max-height:min(88vh,680px);overflow:hidden;background:var(--surface-card);color:var(--text-body);border:var(--border-width) solid var(--border-hairline);border-radius:var(--radius-md);box-shadow:var(--shadow-pop);font:var(--type-body-sm);padding:var(--space-6)}
+/* overflow-y:auto (not hidden): the panel's content varies with what's shown (a vote, developer details, a draft banner),
+   so it scrolls instead of silently clipping whatever falls past max-height. */
+.panel{pointer-events:none;position:fixed;z-index:2147483000;width:340px;max-width:calc(100vw - 16px);max-height:min(88vh,680px);overflow-y:auto;overflow-x:hidden;background:var(--surface-card);color:var(--text-body);border:var(--border-width) solid var(--border-hairline);border-radius:var(--radius-md);box-shadow:var(--shadow-pop);font:var(--type-body-sm);padding:var(--space-6)}
+/* The interactive vote panel (role=dialog) can be clicked into; the read-only tooltip variant stays click-through. */
+.panel[role="dialog"]{pointer-events:auto}
 h4{margin:var(--space-6) 0 var(--space-2);font:var(--type-label);color:var(--text-muted)}
-h4.sloppr{display:grid;gap:var(--space-1);color:var(--text-body)}
+h4.sloppr{display:flex;align-items:baseline;gap:var(--space-3);color:var(--text-body)}
 .kicker{font:var(--type-mono-label);letter-spacing:var(--tracking-caps);text-transform:uppercase;color:var(--text-faint)}
+.scorehead{margin:0 0 var(--space-3);font:var(--type-title);font-weight:var(--weight-bold)}
+.scorehead .num{font-size:var(--text-2xl)}
+.scorehead .of{font:var(--type-body-sm);color:var(--text-faint);font-weight:var(--weight-regular)}
 .head{display:flex;gap:var(--space-5);align-items:flex-start}
-.pill{flex:none;padding:2px var(--space-4);border-radius:var(--radius-xs);font:var(--type-label);font-weight:var(--weight-semibold);color:var(--paper-000);white-space:nowrap}
+.pill{flex:none;padding:2px var(--space-4);border-radius:var(--radius-xs);font:var(--type-label);font-weight:var(--weight-semibold);white-space:nowrap}
+.pill.overridden{opacity:.5;text-decoration:line-through}
 .outcome{margin:0;font:var(--type-body-sm)}
+.outcome.overridden{opacity:.5}
+.votelabel{margin:var(--space-5) 0 0;font:var(--type-label);color:var(--text-muted)}
+.voterow{display:flex;padding:2px;gap:2px;border-radius:var(--radius-sm);background:var(--surface-sunken);border:var(--border-width) solid var(--border-hairline);margin:var(--space-2) 0 0}
+.voterow button{all:unset;box-sizing:border-box;flex:1;text-align:center;padding:var(--space-3) 0;cursor:pointer;border-radius:var(--radius-xs);font:var(--type-label);font-weight:var(--weight-medium);color:var(--text-muted);border:var(--border-width) solid transparent;transition:var(--transition-ui)}
+.voterow button:hover{background:var(--paper-000)}
+.voterow button:focus-visible{box-shadow:var(--shadow-focus)}
+.voterow button[aria-checked="true"]{font-weight:var(--weight-semibold)}
+.voterow-wrap .err{margin-top:var(--space-2);font:var(--type-label);color:var(--red-700)}
+.overridenote{margin:var(--space-2) 0 0;font:var(--type-label);color:var(--text-muted)}
+/* A rare, edge-case action: paired visually with community votes at the bottom rather than crowding the vote controls above. */
+.quiet-link{all:unset;display:block;width:100%;text-align:center;margin-top:var(--space-6);cursor:pointer;font:var(--type-label);color:var(--text-muted);text-decoration:underline}
+.quiet-link:hover,.quiet-link:focus-visible{color:var(--text-body)}
 .zones{display:flex;height:8px;border-radius:var(--radius-pill);overflow:hidden;margin:var(--space-7) 0 var(--space-2);position:relative}
 .zones i{display:block;height:100%}
 .zones.blocked{opacity:.5}
 .cut{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--ink-900)}
-.zlabels{display:flex;font:var(--type-mono-label);color:var(--text-faint)}
-.zlabels span{text-align:center;overflow:visible;white-space:nowrap}
-.dot{position:absolute;top:-4px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--ink-900);border:2px solid var(--paper-000);box-shadow:var(--shadow-raised)}
+/* Each label is its own natural width, laid out start/centre/end across the whole bar (never sized to its own zone), so a
+   narrow zone at an aggressive sensitivity can never clip its label against the panel's edge. */
+.zlabels{display:flex;justify-content:space-between;margin-top:var(--space-2);font:var(--type-mono-label);color:var(--text-faint)}
+.zlabels .zl{white-space:nowrap}
+.zlabels .mid{flex:1;text-align:center}
+.zlabels .end{text-align:right}
+.dot{position:absolute;top:-4px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2px solid var(--paper-000);box-shadow:var(--shadow-raised)}
 .signals{margin:var(--space-5) 0 0;font:var(--type-body-sm)}
 .signals b{font-weight:var(--weight-semibold)}
 svg.radar{display:block;width:100%;height:auto;margin:var(--space-1) 0 0}
 svg.radar text{font:var(--type-label);font-size:10px;fill:var(--text-muted)}
 svg.radar text.hot{fill:var(--text-body);font-weight:var(--weight-bold)}
-.cap{margin:0;color:var(--text-faint);font:var(--type-label);text-align:center}
+.counterbars{display:grid;grid-template-columns:140px 1fr;gap:var(--space-3) var(--space-4);align-items:center;margin-top:var(--space-5)}
+.counterbars .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:var(--type-body-sm)}
 .rows{display:grid;grid-template-columns:130px 1fr 34px;gap:var(--space-3) var(--space-4);align-items:center;margin-top:var(--space-2)}
 .rows .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar{height:6px;border-radius:var(--radius-pill);background:var(--paper-200);position:relative;overflow:hidden}.bar i{position:absolute;inset:0 auto 0 0;border-radius:var(--radius-pill)}
@@ -32,3 +57,10 @@ svg.radar text.hot{fill:var(--text-body);font-weight:var(--weight-bold)}
 .banner{margin:0 0 var(--space-5);padding:var(--space-3) var(--space-4);border-radius:var(--radius-sm);background:var(--surface-sunken);font:var(--type-label)}
 .banner b{font-weight:var(--weight-bold)}
 .note{color:var(--text-faint);font:var(--type-label);margin:var(--space-5) 0 0}
+.community{margin-top:var(--space-6);padding-top:var(--space-4);border-top:var(--border-width) solid var(--border-hairline);font:var(--type-mono-label);color:var(--text-faint);text-align:center}
+.dots{display:inline-flex;align-items:center;gap:var(--space-2);height:22px}
+.dots i{display:block;width:5px;height:5px;border-radius:50%;background:var(--ink-400);animation:bounce 1s ease-in-out infinite}
+.dots i:nth-child(2){animation-delay:.15s}
+.dots i:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-5px);opacity:1}}
+@media (prefers-reduced-motion:reduce){.dots i{animation:pulse 1.4s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}}

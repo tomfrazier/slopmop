@@ -1,4 +1,11 @@
 :host{all:initial;display:inline-flex;align-items:center;vertical-align:middle;flex:none}
-button{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;cursor:pointer;transition:var(--transition-ui)}
-button:hover{background:var(--paper-200)}
+button{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;cursor:pointer;transition:var(--transition-ui);--vb-fill:var(--ink-500);--vb-knock:var(--paper-000)}
+button:hover,button:focus-visible{background:var(--paper-200)}
 button:focus-visible{box-shadow:var(--shadow-focus)}
+/* A tone dims the icon's background at rest; hovering (or keyboard focus) brightens it to the full colour and reverses the glyph. */
+button.tone-green{--vb-fill:var(--blue-500);background:var(--blue-100)}
+button.tone-yellow{--vb-fill:var(--mop-500);background:var(--mop-100)}
+button.tone-red{--vb-fill:var(--red-500);background:var(--red-100)}
+button.tone-green:hover,button.tone-green:focus-visible{background:var(--blue-500);--vb-fill:var(--paper-000);--vb-knock:var(--blue-500)}
+button.tone-yellow:hover,button.tone-yellow:focus-visible{background:var(--mop-500);--vb-fill:var(--paper-000);--vb-knock:var(--mop-500)}
+button.tone-red:hover,button.tone-red:focus-visible{background:var(--red-500);--vb-fill:var(--paper-000);--vb-knock:var(--red-500)}
