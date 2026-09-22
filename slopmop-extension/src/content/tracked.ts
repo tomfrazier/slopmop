@@ -1,6 +1,5 @@
 import type { Community, Engagement, JudgeResponse } from "../shared/types";
 import type { Fold } from "./fold";
-import type { Outline } from "./highlight";
 import type { VoteButton } from "./voteButton";
 
 /** Everything the content script knows about one post on the page. */
@@ -28,12 +27,8 @@ export interface Tracked {
   /** In-flight scoring request, so a menu/vote made mid-request waits for it instead of starting another. */
   pending?: Promise<void>;
   fold?: Fold;
-  /** The coloured border (score, or your vote). */
-  outline?: Outline;
-  /** Identifies what `outline` shows, so a changed vote replaces it but an unchanged one is left alone. */
-  outlineKey?: string;
-  /** Red border kept on a post you unfolded. */
-  refold?: Outline;
+  /** The post was unfolded and can be hidden again ("Hide post again" in the panel). */
+  refolded?: boolean;
   vbtn?: VoteButton;
   counted?: "hidden" | "flagged";
 }

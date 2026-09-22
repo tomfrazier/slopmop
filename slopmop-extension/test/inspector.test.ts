@@ -34,8 +34,17 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("the Details panel", () => {
-  it("leads with a plain verdict and a sentence, in 'possibly / likely' language", () => {
+describe("the breakdown panel", () => {
+  it("leads with the numeric score, out of 100, above the chip", () => {
+    show(resp(0.9));
+    const p = panelOf()!;
+    expect(p.querySelector(".scorehead")!.textContent).toMatch(/^\d+ \/ 100$/);
+    const order = [...p.children].map((c) => c.className);
+    expect(order.indexOf("scorehead")).toBe(0);
+    expect(order.indexOf("scorehead")).toBeLessThan(order.indexOf("head"));
+  });
+
+  it("shows a plain verdict chip and a sentence, in 'possibly / likely' language", () => {
     show(resp(0.9));
     expect(text()).toMatch(/Likely slop/);
     expect(text()).toMatch(/reads like AI slop/i);
@@ -46,6 +55,18 @@ describe("the Details panel", () => {
     closeInspector();
     show(resp(0.02));
     expect(text()).toMatch(/Looks fine/);
+  });
+
+  it("styles the chip as a wash background, coloured text and a thin border of the same colour, per the verdict scale (never colour alone)", () => {
+    show(resp(0.9));
+    const pill = panelOf()!.querySelector(".pill") as HTMLElement;
+    expect(pill.style.background).not.toBe(pill.style.color); // two different channels carry the meaning
+    expect(pill.style.border).toMatch(/1px solid/);
+  });
+
+  it("has no interactive vote row in a read-only (hover) view", () => {
+    show(resp(0.9));
+    expect(panelOf()!.querySelector(".voterow")).toBeNull();
   });
 
   it("shows where the post sits on Looks fine / Possibly / Likely (same zones in Hide mode, plus a line where posts are hidden)", () => {
@@ -59,9 +80,17 @@ describe("the Details panel", () => {
     expect(panelOf()!.querySelector(".cut")).not.toBeNull();
   });
 
-  it("titles the chart section The Slopprint, then What Jev noticed", () => {
+  it("never sizes a zone label to its own zone's width (that's what used to clip 'Possibly' at tight sensitivities)", () => {
+    show(resp(0.9), { sensitivity: "aggressive" });
+    for (const el of panelOf()!.querySelectorAll<HTMLElement>(".zlabels .zl")) expect(el.style.width).toBe("");
+  });
+
+  it("puts THE SLOPPRINT and What Jev noticed on one line, above Strongest signs", () => {
     show(resp(0.6));
-    expect(panelOf()!.querySelector("h4.sloppr")!.textContent).toBe("The SlopprintWhat Jev noticed");
+    const p = panelOf()!;
+    expect(p.querySelector("h4.sloppr")!.textContent).toBe("The SlopprintWhat Jev noticed");
+    const order = [...p.children];
+    expect(order.indexOf(p.querySelector("h4.sloppr")!)).toBeLessThan(order.indexOf(p.querySelector(".signals")!));
   });
 
   it("draws the zones on the shown 0-100 scale: 40 and 70 at Moderate, and the same number at every sensitivity", () => {
@@ -105,10 +134,18 @@ describe("the Details panel", () => {
     expect(text()).toMatch(/Strongest signs:/);
   });
 
-  it("shows the human-voice and usefulness counter-signals as percentages", () => {
+  it("shows the human-voice and usefulness counter-signals with no trailing percentage", () => {
     show(resp(0.5));
-    expect(text()).toMatch(/Sounds like a person.*20%/);
-    expect(text()).toMatch(/Useful to readers.*60%.*Reader response.*0%/);
+    expect(text()).toMatch(/Sounds like a person/);
+    expect(text()).toMatch(/Useful to readers/);
+    expect(text()).toMatch(/Reader response/);
+    expect(text()).not.toMatch(/\d+%/); // the bar itself is the number now
+  });
+
+  it("drops the old 'further from the centre' and 'vote with the mop icon' captions", () => {
+    show(resp(0.9));
+    expect(text()).not.toMatch(/Further from the cent/i);
+    expect(text()).not.toMatch(/Vote with the mop icon/i);
   });
 
   it("never shows weights, colour names, or the arithmetic to an ordinary user", () => {
@@ -159,10 +196,10 @@ describe("the human-written dampener", () => {
 
 describe("verdict wording", () => {
   const d = (r: JudgeResponse, own = false) => (own ? decideOwn(r, "moderate") : decide(r, none, "highlight", "moderate"));
-  it("says possibly / likely, never 'some AI tells' or a colour", () => {
+  it("says possibly / likely, never 'some AI tells'; 'Looks fine' and 'Reads clean' are the clean tone, 'Not sure' its own grey", () => {
     expect(verdictLabel(d(resp(0.9)), false)).toEqual({ text: "Likely slop", tone: "red" });
     expect(verdictLabel(d(resp(0.12)), false)).toEqual({ text: "Possibly slop", tone: "yellow" });
-    expect(verdictLabel(d(resp(0.02)), false)).toEqual({ text: "Looks fine", tone: "grey" });
+    expect(verdictLabel(d(resp(0.02)), false)).toEqual({ text: "Looks fine", tone: "green" });
     expect(verdictLabel(d(resp(0.9, 0.2)), false)).toEqual({ text: "Likely slop", tone: "red" }); // typed by a person, still slop
     expect(verdictLabel(d(resp(0.9), true), true)).toEqual({ text: "Likely slop", tone: "red" });
     expect(verdictLabel(d(resp(0.02), true), true)).toEqual({ text: "Reads clean", tone: "green" });

@@ -1,6 +1,6 @@
-import type { Decision, Engagement, JudgeResponse, Mode, Sensitivity, Vote } from "../shared/types";
+import type { Community, Decision, Engagement, JudgeResponse, Mode, Sensitivity, Vote } from "../shared/types";
 
-/** Everything the breakdown panel needs about one post, gathered fresh at hover time. */
+/** Everything the breakdown panel needs about one post, gathered fresh at hover (or open) time. */
 export interface InspectData {
   urn: string;
   text: string;
@@ -16,4 +16,6 @@ export interface InspectData {
   advanced?: boolean;
   /** A draft in the composer: not posted yet, scored on the writing alone. */
   draft?: { used: number; limit: number } | boolean;
+  /** What other people have said about this post, when the server knows. Absent for drafts and the fold-strip's tooltip. */
+  community?: Community | null;
 }

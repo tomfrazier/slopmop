@@ -4,11 +4,10 @@ import { getSettings } from "../shared/settings";
 import { watchScrolling } from "./scrollHints";
 import { scan, stopFeed, watchFeed, watchSettings } from "./feed";
 import { clearComposer } from "./composer";
-import { closeInspector } from "./inspector";
+import { closeInspector, closeVotePanel } from "./inspector";
 import { stopObserving } from "./observers";
 import { clear, render } from "./render";
 import { hooks, posts, state } from "./state";
-import { closeVoteMenu } from "./voteMenu";
 import { loadVotes, watchVotes } from "./votes";
 
 /** The content script's entry point: it runs on LinkedIn pages, finds posts, and wires everything up. */
@@ -38,7 +37,7 @@ function shutdown() {
   stopFeed();
   stopObserving();
   for (const t of posts.values()) clear(t);
-  closeVoteMenu();
+  closeVotePanel();
   closeInspector();
   clearComposer();
 }

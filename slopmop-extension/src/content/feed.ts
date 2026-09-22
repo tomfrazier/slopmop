@@ -2,13 +2,12 @@ import { live, MANIFEST_KEY } from "../shared/manifest";
 import { extensionAlive } from "../shared/messages";
 import { DEFAULT_SETTINGS, type Settings } from "../shared/types";
 import { syncComposer } from "./composer";
-import { closeInspector } from "./inspector";
+import { closeInspector, closeVotePanel } from "./inspector";
 import { observerFor } from "./observers";
 import { clear, render } from "./render";
 import { POST_SELECTOR } from "./selectors";
 import { active, hooks, posts, state } from "./state";
 import { track } from "./track";
-import { closeVoteMenu } from "./voteMenu";
 
 
 /** Finds every post under `root` and starts tracking the new ones. */
@@ -63,7 +62,7 @@ export function watchSettings() {
     if (area !== "sync" || !changes.settings) return;
     const was = active();
     state.settings = { ...DEFAULT_SETTINGS, ...(changes.settings.newValue as Partial<Settings>) };
-    if (!active()) (closeVoteMenu(), closeInspector());
+    if (!active()) (closeVotePanel(), closeInspector());
     if (!was && active()) scan();
     renderAll();
   });
