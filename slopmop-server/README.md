@@ -278,11 +278,33 @@ The extension's "check this draft" button in the LinkedIn composer sends a draft
 2. If it needs different criteria, add a per-network overlay to the tell library in `src/traits.ts` / `src/questions.ts`.
 3. Write the extension's content script for it; it sends `network` and the post text to the same endpoints.
 
-## Known limits, and where it can be wrong
+## Protecting /judge from scripted use
 
-- An install id is just a random value created by the extension, so the per-install cap stops runaway use but not
-  someone who deliberately reinstalls to get a fresh one. Tighten with per-IP limits (Vercel Firewall) if it matters.
-- Votes are one per install per post, but installs are free to create, so counts can be inflated by a determined actor.
+An install id is just a random value the extension makes up; nothing stops a script from generating a fresh one per
+request to sidestep the per-install daily cap. Two more checks in `admit()` ([`src/routes/judgeAdmit.ts`](src/routes/judgeAdmit.ts))
+don't depend on it:
+
+- **A datacenter IP block.** `/judge` refuses (`403 datacenter_ip`) any request whose IP falls in a published AWS or
+  Google Cloud range — the two providers that each publish one stable, authoritative JSON file of every range they
+  own ([`src/datacenterRanges.ts`](src/datacenterRanges.ts): `DatacenterList` fetches and caches both, refreshed once
+  a day; a failed fetch never blocks a request, it just keeps the last good list). This alone stops a large share of
+  scripted traffic, since that's where most of it runs from, and it costs nothing legitimate: a browser extension
+  doesn't run inside AWS or GCP. `BLOCK_DATACENTER_IPS` (default on) and `DATACENTER_CIDR_EXTRA` (to hand-add ranges
+  for providers with no single published list — Azure, DigitalOcean, Oracle, Hetzner, OVH, Vultr, Linode, ...) are in
+  `.env.example`.
+- **A per-IP hourly cap**, `IP_HOURLY_LIMIT` (default 250, so an IP can't do in an hour what one install is meant to
+  spread across a day), independent of whatever install id a request claims. It resets on the UTC hour and is a
+  ceiling *in addition to* the per-install daily cap, not a replacement for it — an install still needs its own quota
+  too. Both this and the datacenter block key off `x-forwarded-for` / `x-real-ip` (`src/clientIp.ts`); with neither
+  header present (no proxy in front of the server) they simply don't apply, so local `npm run dev` is unaffected.
+
+Neither of these makes the API impossible to script — nothing free-to-install and secretless can guarantee that — but
+together they raise the cost of doing so well past what a casual scraper or a resold "AI slop checker" wrapper would
+bother with. What's left uncovered: an attacker running from a residential proxy pool, or from a provider outside the
+two blocked ranges, looks just like a real user and gets a real user's limits.
+
+Votes are one per install per post, but installs are free to create, so counts can be inflated by a determined actor;
+the IP protections above make that harder but don't stop it, since votes aren't check-gated the way `/judge` is.
 - The daily counter resets at UTC midnight, not local midnight.
 - Judgments are probabilistic. Stiff, formal human writing can score like slop, and the tuning behind the thresholds is small (27 hand votes to start). Votes will improve it, and the admin dashboard shows where Jev and voters disagree.
 - Jev through AI Gateway has a 32k-token state limit (posts here are limited to 6,000 characters).

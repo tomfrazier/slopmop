@@ -8,6 +8,7 @@ const DEFAULT_EVENT_RETENTION_DAYS = 90;
 const DEFAULT_CLIENT_MAX_CONCURRENT = 4;
 const DEFAULT_CLIENT_RATE_PER_MINUTE = 120;
 const DEFAULT_INPUT_USD_PER_M = 0.042;
+const DEFAULT_IP_HOURLY_LIMIT = 250;
 
 export type Env = Record<string, string | undefined>;
 
@@ -39,6 +40,15 @@ export interface Config {
   clientRatePerMinute: number;
   /** Extra allowed browser origins (extension origins are always allowed). */
   allowedOrigins: string[];
+  /**
+   * A second ceiling on /judge, independent of the install id (which costs a script nothing to fabricate): this many checks
+   * per source IP per UTC hour, whichever install ids it claims.
+   */
+  ipHourlyLimit: number;
+  /** Reject /judge outright for IPs in a known AWS/GCP range (plus datacenterExtraCidrs), before any check is spent. */
+  blockDatacenterIps: boolean;
+  /** Extra CIDR ranges (any provider) to treat as datacenter/hosting, alongside the fetched AWS + GCP lists. */
+  datacenterExtraCidrs: string[];
 }
 
 const int = (v: string | undefined, fallback: number, min = 0) => {
@@ -67,5 +77,8 @@ export function loadConfig(env: Env): Config {
     clientMaxConcurrent: int(env.CLIENT_MAX_CONCURRENT, DEFAULT_CLIENT_MAX_CONCURRENT, 1),
     clientRatePerMinute: int(env.CLIENT_RATE_PER_MINUTE, DEFAULT_CLIENT_RATE_PER_MINUTE, 1),
     allowedOrigins: (env.ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+    ipHourlyLimit: int(env.IP_HOURLY_LIMIT, DEFAULT_IP_HOURLY_LIMIT, 1),
+    blockDatacenterIps: env.BLOCK_DATACENTER_IPS === undefined ? true : flag(env.BLOCK_DATACENTER_IPS),
+    datacenterExtraCidrs: (env.DATACENTER_CIDR_EXTRA ?? "").split(",").map((s) => s.trim()).filter(Boolean),
   };
 }

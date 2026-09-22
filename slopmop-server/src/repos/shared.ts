@@ -28,3 +28,6 @@ export const nextResetIso = (t: number) => {
   const d = new Date(t);
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1)).toISOString();
 };
+
+/** The UTC calendar hour a timestamp falls in, as YYYY-MM-DDTHH. */
+export const hourKey = (t: number) => new Date(t).toISOString().slice(0, 13);

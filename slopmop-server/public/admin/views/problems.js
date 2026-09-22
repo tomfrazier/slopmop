@@ -3,7 +3,7 @@ import { fmt } from "../format.js";
 import { deviceCode, table } from "../widgets.js";
 
 /** How each kind of refusal is named in the errors table. */
-const REFUSAL_NAMES = { rate_limit: "rate limit", disabled: "blocked (disabled)" };
+const REFUSAL_NAMES = { rate_limit: "rate limit", disabled: "blocked (disabled)", ip_rate_limit: "IP hourly limit", datacenter_ip: "datacenter IP" };
 
 export const problemsTable = (d) =>
   table(

@@ -1,6 +1,7 @@
 import type { Config } from "./config.js";
 import type { JevBackend } from "./jev.js";
 import type { Store } from "./store.js";
+import type { DatacenterList } from "./datacenterRanges.js";
 import type { ManifestStore } from "./manifest.js";
 import type { ScoringStore } from "./scoringStore.js";
 import type { WeightStore } from "./weightStore.js";
@@ -14,6 +15,7 @@ export interface Ctx {
   weights: WeightStore;
   scoring: ScoringStore;
   manifest: ManifestStore;
+  datacenter: DatacenterList;
   jev: JevBackend | null;
   criteriaVersion: string;
   version: string;
