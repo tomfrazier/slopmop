@@ -6,33 +6,38 @@ import { TONE_ACCENT } from "../shared/verdictStyle";
 import type { InspectData } from "./inspectData";
 import { developerDetails } from "./inspectorDeveloper";
 import { radarChart } from "./inspectorRadar";
-import { communityLine, personBar, scoreHeader, scoreZones, strongestSigns, verdictHeader, voteRow } from "./inspectorSections";
+import { communityLine, personBar, scoreHeader, scoreZones, strongestSigns, verdictBlock } from "./inspectorSections";
 import { TELL_AXES } from "./labels";
 import type { PanelState, VoteCtx } from "./votePanelTypes";
 
 /**
- * The whole panel for one post, in order: the score, the verdict chip and why, the vote row (when interactive), the range
- * bar, the Slopprint (spider chart), the three counter-signal bars, and community votes at the very bottom.
+ * The whole panel for one post, in order: the score, the verdict block (chip, reason, and the vote row when interactive),
+ * the range bar, the Slopprint (spider chart), the three counter-signal bars, and community votes (with "Hide post again",
+ * both low-priority, edge-case actions) at the very bottom.
  */
 export function buildPanel(data: InspectData, vote?: VoteCtx): HTMLElement {
   const d = data.decision;
   const e = d.explain!;
   const verdict = verdictLabel(d as Decision & { ownLevel?: OwnLevel }, data.own);
   const axes = TELL_AXES.map((a) => ({ label: a.label, value: e.tells.find((t) => t.id === a.id)?.value ?? 0 }));
+  const draftNote = data.draft
+    ? h("div", { class: "banner" }, h("b", {}, "Draft. "), "Not posted yet, so it's scored on the writing alone, with no reader response.", typeof data.draft === "object" ? ` This used one check (${data.draft.used} of ${data.draft.limit} today).` : "")
+    : null;
   const refoldBtn = vote?.canRefold ? h("button", { type: "button", class: "quiet-link" }, "Hide post again") : null;
   refoldBtn?.addEventListener("click", () => vote!.onRefold());
   return h(
     "div",
     { class: "panel", role: vote ? "dialog" : "tooltip", "aria-label": "Slop Mop breakdown" },
     scoreHeader(displayScore(d.score)),
-    ...verdictHeader(data, e, verdict),
-    ...(vote ? [voteRow(vote), ...(refoldBtn ? [refoldBtn] : [])] : []),
+    ...(draftNote ? [draftNote] : []),
+    ...verdictBlock(data, e, verdict, vote),
     ...scoreZones(data, e, d.score, vote?.current ?? data.vote),
     h("h4", { class: "sloppr" }, h("span", { class: "kicker" }, "The Slopprint"), "What Jev noticed"),
     strongestSigns(data, e),
     radarChart(axes, TONE_ACCENT[verdict.tone]) as unknown as HTMLElement,
     h("div", { class: "counterbars" }, ...personBar("Sounds like a person", e.humanVoice), ...personBar("Useful to readers", e.usefulness), ...personBar("Reader response", e.engagement.norm)),
     ...(data.advanced ? developerDetails(d, e) : []),
+    ...(refoldBtn ? [refoldBtn] : []),
     communityLine(data.community),
   );
 }

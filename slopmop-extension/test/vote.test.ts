@@ -122,6 +122,40 @@ describe("vote panel", () => {
     expect(order.indexOf("voterow")).toBeLessThan(order.indexOf("zones"));
   });
 
+  it("labels the vote row so it reads as an action, not decoration", () => {
+    openVotePanel(anchor, opts());
+    expect(panelOf()!.querySelector(".votelabel")!.textContent).toBe("Is this slop?");
+  });
+
+  it("dims and strikes the chip once a vote overrides it, and says so; a plain 'Not sure' does neither", () => {
+    openVotePanel(anchor, opts({ current: "maybe" }));
+    const panel = panelOf()!;
+    expect(panel.querySelector(".pill")!.className).toMatch(/overridden/);
+    expect(panel.querySelector(".outcome")!.className).toMatch(/overridden/);
+    expect(panel.querySelector(".overridenote")!.textContent).toMatch(/overrides Jev's call/);
+    closeVotePanel();
+    openVotePanel(anchor, opts({ current: null }));
+    const panel2 = panelOf()!;
+    expect(panel2.querySelector(".pill")!.className).not.toMatch(/overridden/);
+    expect(panel2.querySelector(".overridenote")).toBeNull();
+  });
+
+  it("keeps the chip, its reason, the vote label and the vote row together as one group, not split by a floating banner", () => {
+    openVotePanel(anchor, opts({ current: "maybe" }));
+    const order = [...panelOf()!.children].map((c) => c.className);
+    const head = order.indexOf("head");
+    expect(order[head + 1]).toBe("votelabel");
+    expect(order[head + 2]).toBe("voterow");
+    expect(order[head + 3]).toBe("overridenote");
+  });
+
+  it("puts 'Hide post again' near community votes at the bottom, not inside the vote group", () => {
+    openVotePanel(anchor, opts({ canRefold: true }));
+    const order = [...panelOf()!.children].map((c) => c.className);
+    expect(order.indexOf("quiet-link")).toBeGreaterThan(order.indexOf("counterbars"));
+    expect(order.indexOf("quiet-link")).toBeLessThan(order.indexOf("community"));
+  });
+
   it("shows what the community has said at the very bottom", () => {
     openVotePanel(anchor, opts());
     expect(panelOf()!.querySelector(".community")!.textContent).toBe("3 flagged as slop · 1 maybe · 2 no");

@@ -23,18 +23,6 @@ export function scoreHeader(score: number) {
   return h("div", { class: "scorehead" }, h("span", { class: "num" }, String(Math.round(score))), h("span", { class: "of" }, " / 100"));
 }
 
-/** The verdict chip, styled per the design system's verdict scale (a wash background, coloured text, thin border — never colour alone), and the one sentence that says why. */
-export function verdictHeader(data: InspectData, e: Explain, verdict: { text: string; tone: VerdictTone }) {
-  const draftNote = data.draft
-    ? h("div", { class: "banner" }, h("b", {}, "Draft. "), "Not posted yet, so it's scored on the writing alone, with no reader response.", typeof data.draft === "object" ? ` This used one check (${data.draft.used} of ${data.draft.limit} today).` : "")
-    : null;
-  const banner = data.vote
-    ? h("div", { class: "banner" }, "You voted ", h("b", { style: `color:${TONE_STYLE[voteLevel(data.vote)].text}` }, VOTE_NAME[data.vote]), " on this post. Your vote overrides the score for what is shown.")
-    : null;
-  const st = TONE_STYLE[verdict.tone];
-  return [draftNote, banner, h("div", { class: "head" }, h("span", { class: "pill", style: `background:${st.bg};color:${st.text};border:1px solid ${st.border}` }, verdict.text), h("p", { class: "outcome" }, e.outcome))];
-}
-
 const VOTE_OPTIONS: { v: Vote | null; label: string }[] = [
   { v: null, label: "Not sure" },
   { v: "no", label: "No" },
@@ -57,6 +45,32 @@ export function voteRow(ctx: VoteCtx): HTMLElement {
     }),
   );
   return ctx.error ? (h("div", { class: "voterow-wrap" }, group, h("div", { class: "err" }, ctx.error)) as HTMLElement) : group;
+}
+
+/**
+ * The chip, its reason, and (when interactive) the vote label and row — all one group, so "what Jev called it" and "what you
+ * called it" read together instead of a vote banner floating above the chip while the actual controls sit further down.
+ * Once you've voted, the chip and its sentence dim and strike through: Jev's call is still shown, but visibly superseded.
+ */
+export function verdictBlock(data: InspectData, e: Explain, verdict: { text: string; tone: VerdictTone }, vote?: VoteCtx): HTMLElement[] {
+  const activeVote = vote ? vote.current : data.vote;
+  const overridden = !!activeVote;
+  const st = TONE_STYLE[verdict.tone];
+  const head = h(
+    "div",
+    { class: "head" },
+    h("span", { class: overridden ? "pill overridden" : "pill", style: `background:${st.bg};color:${st.text};border:1px solid ${st.border}` }, verdict.text),
+    h("p", { class: overridden ? "outcome overridden" : "outcome" }, e.outcome),
+  );
+  const rows: HTMLElement[] = [head];
+  if (vote) {
+    rows.push(h("div", { class: "votelabel" }, "Is this slop?"));
+    rows.push(voteRow(vote));
+  }
+  if (overridden) {
+    rows.push(h("p", { class: "overridenote" }, vote ? "Your vote overrides Jev's call above." : `You voted ${VOTE_NAME[activeVote]}. Your vote overrides the score for what is shown.`));
+  }
+  return rows;
 }
 
 /**

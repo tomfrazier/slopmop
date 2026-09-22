@@ -2,7 +2,9 @@
 *{box-sizing:border-box}
 .panel.notice{width:260px;padding:var(--space-5) var(--space-6)}
 .notice h4{margin:0 0 var(--space-2)}
-.panel{pointer-events:none;position:fixed;z-index:2147483000;width:340px;max-width:calc(100vw - 16px);max-height:min(88vh,680px);overflow:hidden;background:var(--surface-card);color:var(--text-body);border:var(--border-width) solid var(--border-hairline);border-radius:var(--radius-md);box-shadow:var(--shadow-pop);font:var(--type-body-sm);padding:var(--space-6)}
+/* overflow-y:auto (not hidden): the panel's content varies with what's shown (a vote, developer details, a draft banner),
+   so it scrolls instead of silently clipping whatever falls past max-height. */
+.panel{pointer-events:none;position:fixed;z-index:2147483000;width:340px;max-width:calc(100vw - 16px);max-height:min(88vh,680px);overflow-y:auto;overflow-x:hidden;background:var(--surface-card);color:var(--text-body);border:var(--border-width) solid var(--border-hairline);border-radius:var(--radius-md);box-shadow:var(--shadow-pop);font:var(--type-body-sm);padding:var(--space-6)}
 /* The interactive vote panel (role=dialog) can be clicked into; the read-only tooltip variant stays click-through. */
 .panel[role="dialog"]{pointer-events:auto}
 h4{margin:var(--space-6) 0 var(--space-2);font:var(--type-label);color:var(--text-muted)}
@@ -13,14 +15,19 @@ h4.sloppr{display:flex;align-items:baseline;gap:var(--space-3);color:var(--text-
 .scorehead .of{font:var(--type-body-sm);color:var(--text-faint);font-weight:var(--weight-regular)}
 .head{display:flex;gap:var(--space-5);align-items:flex-start}
 .pill{flex:none;padding:2px var(--space-4);border-radius:var(--radius-xs);font:var(--type-label);font-weight:var(--weight-semibold);white-space:nowrap}
+.pill.overridden{opacity:.5;text-decoration:line-through}
 .outcome{margin:0;font:var(--type-body-sm)}
-.voterow{display:flex;padding:2px;gap:2px;border-radius:var(--radius-sm);background:var(--surface-sunken);border:var(--border-width) solid var(--border-hairline);margin:var(--space-5) 0 0}
+.outcome.overridden{opacity:.5}
+.votelabel{margin:var(--space-5) 0 0;font:var(--type-label);color:var(--text-muted)}
+.voterow{display:flex;padding:2px;gap:2px;border-radius:var(--radius-sm);background:var(--surface-sunken);border:var(--border-width) solid var(--border-hairline);margin:var(--space-2) 0 0}
 .voterow button{all:unset;box-sizing:border-box;flex:1;text-align:center;padding:var(--space-3) 0;cursor:pointer;border-radius:var(--radius-xs);font:var(--type-label);font-weight:var(--weight-medium);color:var(--text-muted);border:var(--border-width) solid transparent;transition:var(--transition-ui)}
 .voterow button:hover{background:var(--paper-000)}
 .voterow button:focus-visible{box-shadow:var(--shadow-focus)}
 .voterow button[aria-checked="true"]{font-weight:var(--weight-semibold)}
 .voterow-wrap .err{margin-top:var(--space-2);font:var(--type-label);color:var(--red-700)}
-.quiet-link{all:unset;display:block;margin-top:var(--space-3);cursor:pointer;font:var(--type-label);color:var(--text-muted);text-decoration:underline}
+.overridenote{margin:var(--space-2) 0 0;font:var(--type-label);color:var(--text-muted)}
+/* A rare, edge-case action: paired visually with community votes at the bottom rather than crowding the vote controls above. */
+.quiet-link{all:unset;display:block;width:100%;text-align:center;margin-top:var(--space-6);cursor:pointer;font:var(--type-label);color:var(--text-muted);text-decoration:underline}
 .quiet-link:hover,.quiet-link:focus-visible{color:var(--text-body)}
 .zones{display:flex;height:8px;border-radius:var(--radius-pill);overflow:hidden;margin:var(--space-7) 0 var(--space-2);position:relative}
 .zones i{display:block;height:100%}
