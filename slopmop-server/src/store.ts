@@ -7,6 +7,7 @@ import { ContentRepo } from "./repos/content.js";
 import { EventRepo } from "./repos/events.js";
 import { ExportRepo } from "./repos/exports.js";
 import { CuratedRepo } from "./repos/curated.js";
+import { IpCapRepo } from "./repos/ipCaps.js";
 import { VoteRepo } from "./repos/votes.js";
 
 export { dayKey, nextResetIso } from "./repos/shared.js";
@@ -28,6 +29,7 @@ export class Store {
   readonly votes: VoteRepo;
   readonly exports: ExportRepo;
   readonly curated: CuratedRepo;
+  readonly ipCaps: IpCapRepo;
 
   constructor(
     readonly db: Db,
@@ -42,6 +44,7 @@ export class Store {
     this.votes = new VoteRepo(deps);
     this.exports = new ExportRepo(deps);
     this.curated = new CuratedRepo(deps);
+    this.ipCaps = new IpCapRepo(deps);
   }
 
   /** Only a salted hash of an install id is ever stored. */

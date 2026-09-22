@@ -21,7 +21,7 @@ export async function judgeRoute(request: Request, ctx: Ctx): Promise<Response> 
   if (!ctx.jev) throw new HttpError(503, "server_misconfigured", "No Jev credentials are configured on the server (set AI_GATEWAY_API_KEY).");
 
   const timing = serverTiming();
-  const { spend, lookup } = await admit(ctx, installId, input, timing);
+  const { spend, lookup } = await admit(ctx, installId, input, timing, request);
   const { store } = ctx;
 
   try {

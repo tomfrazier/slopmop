@@ -3,6 +3,7 @@ import { openDb } from "./db/index.js";
 import type { Ctx } from "./ctx.js";
 import { createJev } from "./jev.js";
 import { CRITERIA_VERSION } from "./questions.js";
+import { DatacenterList } from "./datacenterRanges.js";
 import { ManifestStore } from "./manifest.js";
 import { ScoringStore } from "./scoringStore.js";
 import { Store } from "./store.js";
@@ -20,6 +21,7 @@ export async function createContext(env: Env, now: () => number = Date.now): Pro
     weights: new WeightStore(db, { weights: config.tellWeights, custom: config.customWeights }, now),
     scoring: new ScoringStore(db, now),
     manifest: new ManifestStore(db, now),
+    datacenter: new DatacenterList(config.datacenterExtraCidrs, now),
     jev: createJev(env),
     criteriaVersion: CRITERIA_VERSION,
     version: VERSION,

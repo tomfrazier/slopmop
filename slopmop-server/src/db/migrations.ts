@@ -130,4 +130,8 @@ export const MIGRATIONS: string[][] = [
     )`,
     `CREATE INDEX IF NOT EXISTS setting_history_key ON setting_history (key, id)`,
   ],
+  [
+    // A second, independent ceiling on /judge, per source IP per UTC hour (see IpCapRepo). ip_hash is a salted hash, like install_hash.
+    `CREATE TABLE IF NOT EXISTS ip_usage (ip_hash TEXT NOT NULL, hour TEXT NOT NULL, checks INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (ip_hash, hour))`,
+  ],
 ];
