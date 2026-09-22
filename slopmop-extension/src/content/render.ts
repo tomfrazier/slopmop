@@ -44,7 +44,7 @@ function failOpen(what: string, t: Tracked, fn: () => void) {
 function showFold(t: Tracked, d: Decision, inspect: () => InspectData | null) {
   failOpen("fold", t, () => {
     t.refolded = false;
-    t.fold = fold(
+    const f = fold(
       t.el,
       d,
       state.lastStats,
@@ -56,6 +56,10 @@ function showFold(t: Tracked, d: Decision, inspect: () => InspectData | null) {
       },
       inspect,
     );
+    // Null means the post had no parent to insert a strip before (LinkedIn detached it mid-flight): try again next render
+    // rather than counting a hide that never visibly happened.
+    if (!f) return void console.warn(`[slopmop] couldn't fold ${t.urn}: post has no parent element`);
+    t.fold = f;
     void count(t, "hidden");
   });
 }
