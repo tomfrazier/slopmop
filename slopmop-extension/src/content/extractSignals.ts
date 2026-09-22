@@ -21,12 +21,21 @@ export function parseCount(raw: string | null | undefined): number {
   return Math.round(m[2] ? n * (m[2].toLowerCase() === "k" ? 1e3 : 1e6) : n);
 }
 
-/** Finds a leaf element whose whole text is "<count> <word>(s)" and returns the count. */
+/**
+ * Finds a leaf element whose whole text is "<count> <word>(s)" and returns the count. Some post layouts (seen on a
+ * video post 2026-09-22) render the count alone (`<span aria-hidden="true">5,543</span>`) and put the word only in an
+ * ancestor's `aria-label` ("5,543 Reactions") — reactions read as 0 on such a post while comments and reposts, whose
+ * layout does carry the word inline, were unaffected. So a second pass checks `aria-label`s the same way.
+ */
 export function countFor(el: Element, word: string): number {
   const re = new RegExp(`^\\s*(\\d[\\d,.]*\\s*[kKmM]?)\\s+${word}s?\\s*$`, "i");
   for (const n of el.querySelectorAll(SEL.countLeaf)) {
     if (n.childElementCount > 0) continue; // leaf text only, so comment bodies can't match
     const m = re.exec(n.textContent ?? "");
+    if (m) return parseCount(m[1]);
+  }
+  for (const n of el.querySelectorAll("[aria-label]")) {
+    const m = re.exec(n.getAttribute("aria-label") ?? "");
     if (m) return parseCount(m[1]);
   }
   return 0;
