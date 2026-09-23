@@ -38,12 +38,13 @@ export async function admit(ctx: Ctx, installId: string, input: JudgeInput, timi
     throw new HttpError(403, "datacenter_ip", "Requests from cloud or hosting-provider IP ranges aren't accepted.");
   }
 
+  const limits = await ctx.limits.current();
   const [spendR, lookup, disabledR, recentR, ipSpendR] = await Promise.allSettled([
-    timing.timed("cap", store.caps.consume(installId)),
+    timing.timed("cap", store.caps.consume(installId, limits.dailyLimit)),
     timing.timed("lookup", store.content.reusableVerdict(input.network.id, input.contentId, ctx.criteriaVersion)),
     timing.timed("client", store.clients.isDisabled(installId)),
     store.clients.recentRequests(installId, RATE_WINDOW_MS),
-    ipHash ? timing.timed("ipcap", store.ipCaps.consume(ipHash, config.ipHourlyLimit)) : Promise.resolve(null),
+    ipHash ? timing.timed("ipcap", store.ipCaps.consume(ipHash, limits.ipHourlyLimit, installId)) : Promise.resolve(null),
   ]);
   if (spendR.status === "rejected") throw spendR.reason;
   const spend = spendR.value;

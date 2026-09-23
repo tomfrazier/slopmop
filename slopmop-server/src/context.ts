@@ -4,6 +4,7 @@ import type { Ctx } from "./ctx.js";
 import { createJev } from "./jev.js";
 import { CRITERIA_VERSION } from "./questions.js";
 import { DatacenterList } from "./datacenterRanges.js";
+import { LimitsStore } from "./limitsStore.js";
 import { ManifestStore } from "./manifest.js";
 import { ScoringStore } from "./scoringStore.js";
 import { Store } from "./store.js";
@@ -20,6 +21,7 @@ export async function createContext(env: Env, now: () => number = Date.now): Pro
     store: new Store(db, config, now),
     weights: new WeightStore(db, { weights: config.tellWeights, custom: config.customWeights }, now),
     scoring: new ScoringStore(db, now),
+    limits: new LimitsStore(db, { dailyLimit: config.dailyLimit, ipHourlyLimit: config.ipHourlyLimit }, now),
     manifest: new ManifestStore(db, now),
     datacenter: new DatacenterList(config.datacenterExtraCidrs, now),
     jev: createJev(env),

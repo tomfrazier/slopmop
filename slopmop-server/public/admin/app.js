@@ -6,15 +6,19 @@ import { W, loadWeights } from "./weightsState.js";
 import { simulatorCard } from "./simulator.js";
 import { loadTuner, tunerCard } from "./tunerEditor.js";
 import { manifestCard, loadManifest, M } from "./manifestEditor.js";
+import { limitsCard, loadLimits } from "./limitsEditor.js";
+import { currentPage, sidebar } from "./nav.js";
 import { scoringCard, loadScoring, S } from "./scoringEditor.js";
 import { weightsCard } from "./weightsEditor.js";
 import { section, panel } from "./widgets.js";
 import { activityCharts } from "./views/activity.js";
 import { communitySections } from "./views/community.js";
+import { devicesPage } from "./views/devicesPage.js";
+import { reviewPage } from "./views/reviewPage.js";
 import { header } from "./views/header.js";
 import { jevSections } from "./views/jev.js";
 import { kpiRow } from "./views/kpis.js";
-import { operationsSections } from "./views/operations.js";
+import { overviewTail } from "./views/operations.js";
 
 const app = document.getElementById("app");
 const AUTO_REFRESH_MS = 60_000;
@@ -56,13 +60,14 @@ function login(message) {
 /** Fetches (unless `refetch` is false and we already have data) and draws the page, then restarts the auto-refresh timer. */
 async function load(refetch = true) {
   if (!app.firstChild) app.replaceChildren(el("div", { class: "empty" }, "Loading…"));
-  if (refetch || !lastStats) [lastStats] = await Promise.all([api("/stats", { range: prefs.range, network: prefs.network }), loadWeights(), loadScoring(), loadManifest(), loadTuner()]);
+  if (refetch || !lastStats) [lastStats] = await Promise.all([api("/stats", { range: prefs.range, network: prefs.network }), loadWeights(), loadScoring(), loadManifest(), loadTuner(), loadLimits()]);
   render(lastStats);
   clearInterval(timer);
-  if (prefs.refresh) timer = setInterval(() => !W.dirty && !S.dirty && !M.dirty && void refresh(), AUTO_REFRESH_MS); // not while a weight edit is in progress
+  if (prefs.refresh) timer = setInterval(() => (currentPage() === "devices" ? void hooks.reloadDevices() : currentPage() === "review" ? undefined : !W.dirty && !S.dirty && !M.dirty && void refresh()), AUTO_REFRESH_MS); // not while a weight edit is in progress; the device list reloads in place so a search isn't lost
 }
 
 async function refresh(refetch = true) {
+  if (currentPage() === "devices") return hooks.reloadDevices(); // the device list fetches its own data and redraws itself
   try {
     await load(refetch);
   } catch (e) {
@@ -70,12 +75,12 @@ async function refresh(refetch = true) {
   }
 }
 
-/** The whole page, top to bottom. Each section is built in its own module under views/. */
-function render(d) {
-  app.replaceChildren(
-    header(d),
-    kpiRow(d),
-    ...activityCharts(d),
+/** What each section shows. Each is built from modules under views/ (or a card of its own). */
+const PAGES = {
+  overview: (d) => [kpiRow(d), ...activityCharts(d), ...overviewTail(d)],
+  devices: () => [devicesPage()],
+  review: () => [reviewPage()],
+  scoring: () => [
     section("How a score is made", "The formula with today's numbers, and a simulator that runs the real code. Nothing here is saved."),
     panel(simulatorCard()),
     section("Tell weights", "How much each tell counts toward the slop score. Edits are live."),
@@ -84,16 +89,24 @@ function render(d) {
     panel(scoringCard()),
     section("Threshold tuner", "What each cut would catch on labelled posts. It only suggests; you decide."),
     panel(tunerCard()),
+  ],
+  defaults: () => [
+    limitsCard(),
     section("Client settings", "Every fixed value the extension runs on. Edits reach extensions within a day, sooner as they hear a new version."),
     panel(manifestCard()),
-    ...jevSections(d),
-    ...communitySections(d),
-    ...operationsSections(d),
-  );
+  ],
+  posts: (d) => [...jevSections(d), ...communitySections(d)],
+};
+
+/** The page for the current section: the side navigation, then the section's own header and content. */
+function render(d) {
+  const page = currentPage();
+  app.replaceChildren(el("div", { class: "layout" }, sidebar(page), el("div", { class: "content" }, header(d, page), ...PAGES[page](d))));
 }
 
 // ---------------------------------------------------------------- boot
 hooks.refresh = refresh;
+window.addEventListener("hashchange", () => lastStats && void load(false)); // a section link: redraw from what we already have
 hooks.login = login;
 
 (async function boot() {

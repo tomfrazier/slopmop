@@ -8,7 +8,8 @@
 </head>
 <body>
 <header>
-  <div class="brand"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="10.6" y="2" width="2.8" height="12" rx="1.4" fill="currentColor"/><path d="M5.2 13.6h13.6l-1.6 8.2H6.8z" fill="currentColor"/><path d="M8.6 16.6v4.6M12 16.6v4.6M15.4 16.6v4.6" stroke="#fff" stroke-width="1.15" stroke-linecap="round"/></svg><h1>Slop Mop</h1></div>
+  <div class="ident"><div class="brand"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="10.6" y="2" width="2.8" height="12" rx="1.4" fill="currentColor"/><path d="M5.2 13.6h13.6l-1.6 8.2H6.8z" fill="currentColor"/><path d="M8.6 16.6v4.6M12 16.6v4.6M15.4 16.6v4.6" stroke="#fff" stroke-width="1.15" stroke-linecap="round"/></svg><h1>Slop Mop</h1></div>
+    <button id="device" class="device" type="button" title="Your device ID. Click to copy it, with the version and the last problem, for a support message.">Device –</button></div>
   <label class="switch" title="Enable or disable Slop Mop">
     <input id="enabled" type="checkbox" role="switch" aria-label="Enable Slop Mop" />
     <span class="track"><span class="knob"></span></span>
@@ -48,6 +49,7 @@
     <div class="usage-row"><b id="usage-n">–</b><span id="usage-of"></span></div>
     <div class="meter" aria-hidden="true"><i id="usage-bar"></i></div>
     <p class="note" id="usage-note"></p>
+    <p class="note problem" id="problem" hidden></p>
   </section>
 </main>
 

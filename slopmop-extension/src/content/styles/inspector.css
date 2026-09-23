@@ -35,10 +35,12 @@ h4.sloppr{display:flex;align-items:baseline;gap:var(--space-3);color:var(--text-
 .cut{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--ink-900)}
 /* Each label is its own natural width, laid out start/centre/end across the whole bar (never sized to its own zone), so a
    narrow zone at an aggressive sensitivity can never clip its label against the panel's edge. */
-.zlabels{display:flex;justify-content:space-between;margin-top:var(--space-2);font:var(--type-mono-label);color:var(--text-faint)}
-.zlabels .zl{white-space:nowrap}
-.zlabels .mid{flex:1;text-align:center}
-.zlabels .end{text-align:right}
+.zlabels{position:relative;height:14px;margin-top:var(--space-2);font:var(--type-mono-label);color:var(--text-faint)}
+.zlabels .zl{position:absolute;top:0;white-space:nowrap}
+.zlabels .start{left:0}
+/* starts where the yellow band starts, but never runs past the right edge (5em is a little more than the word) */
+.zlabels .mid{left:min(var(--x),calc(100% - 5em))}
+.zlabels .end{right:0}
 .dot{position:absolute;top:-4px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2px solid var(--paper-000);box-shadow:var(--shadow-raised)}
 .signals{margin:var(--space-5) 0 0;font:var(--type-body-sm)}
 .signals b{font-weight:var(--weight-semibold)}

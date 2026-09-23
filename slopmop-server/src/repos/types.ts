@@ -17,6 +17,8 @@ export interface Usage {
   remaining: number;
   /** ISO time the counter resets (next UTC midnight). */
   resetsAt: string;
+  /** The short id the admin dashboard shows for this install, so a user can quote it in a support request. */
+  device: string;
 }
 
 export interface StoredVerdict {

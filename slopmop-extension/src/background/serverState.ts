@@ -11,13 +11,14 @@ const timeOf = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "nu
 export const limitMessage = (u: Usage) => `Daily limit of ${u.limit} checks reached. It resets at ${timeOf(u.resetsAt)}.`;
 export const DISABLED_MESSAGE = "This install has been disabled by the Slop Mop server.";
 
-async function activeHold(key: "dailyLimit" | "blocked"): Promise<Hold | null> {
+async function activeHold(key: "dailyLimit" | "blocked" | "cooldown"): Promise<Hold | null> {
   const hold = (await chrome.storage.local.get(key))[key] as Hold | undefined;
   return hold && Date.now() < hold.until ? hold : null;
 }
 
 export const dailyLimitHold = () => activeHold("dailyLimit");
 export const blockedHold = () => activeHold("blocked");
+export const cooldownHold = () => activeHold("cooldown");
 
 /** The per-install daily cap: retrying can't help until it resets, so remember it and stop asking. */
 export function rememberDailyLimit(usage: Usage, message: string) {
@@ -27,4 +28,9 @@ export function rememberDailyLimit(usage: Usage, message: string) {
 /** The admin turned this install off. Remember it and stop asking for a while. */
 export function rememberBlocked(message: string) {
   return chrome.storage.local.set({ blocked: { until: Date.now() + live.values.blockedRecheckMs, message } satisfies Hold });
+}
+
+/** The server asked us to stop for a while (this network used its hourly allowance): remember it and don't ask until then. */
+export function rememberCooldown(message: string, seconds: number) {
+  return chrome.storage.local.set({ cooldown: { until: Date.now() + seconds * 1000, message } satisfies Hold });
 }

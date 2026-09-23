@@ -69,15 +69,24 @@ describe("the breakdown panel", () => {
     expect(panelOf()!.querySelector(".voterow")).toBeNull();
   });
 
-  it("shows where the post sits on Looks fine / Possibly / Likely (same zones in Hide mode, plus a line where posts are hidden)", () => {
+  it("shows where the post sits on Fine / Possibly / Likely (same zones in Hide mode, plus a line where posts are hidden)", () => {
     show(resp(0.9));
     const labels = [...panelOf()!.querySelectorAll(".zlabels span")].map((s) => s.textContent);
-    expect(labels).toEqual(["Looks fine", "Possibly", "Likely"]);
+    expect(labels).toEqual(["Fine", "Possibly", "Likely"]);
     expect(panelOf()!.querySelector(".dot")).not.toBeNull();
     closeInspector();
     show(resp(0.9), { mode: "hide" });
-    expect([...panelOf()!.querySelectorAll(".zlabels span")].map((s) => s.textContent)).toEqual(["Looks fine", "Possibly", "Likely (hidden)"]);
+    expect([...panelOf()!.querySelectorAll(".zlabels span")].map((s) => s.textContent)).toEqual(["Fine", "Possibly", "Likely (hidden)"]);
     expect(panelOf()!.querySelector(".cut")).not.toBeNull();
+  });
+
+  it("starts the Possibly label where the yellow band starts, at every sensitivity", () => {
+    for (const sensitivity of ["aggressive", "moderate", "mild"] as const) {
+      show(resp(0.9), { sensitivity });
+      const yellowStart = (panelOf()!.querySelector(".zones i") as HTMLElement).style.width; // the blue band's width is where yellow begins
+      expect((panelOf()!.querySelector(".zlabels .mid") as HTMLElement).getAttribute("style")).toContain(`--x:${yellowStart}`);
+      closeInspector();
+    }
   });
 
   it("never sizes a zone label to its own zone's width (that's what used to clip 'Possibly' at tight sensitivities)", () => {

@@ -29,16 +29,19 @@ export function parseCount(raw: string | null | undefined): number {
  */
 export function countFor(el: Element, word: string): number {
   const re = new RegExp(`^\\s*(\\d[\\d,.]*\\s*[kKmM]?)\\s+${word}s?\\s*$`, "i");
+  // Every match counts and the largest wins: a post card can hold other counts with the same word (the reaction count on a comment
+  // in the preview, "2 reactions", was read instead of the post's own 214), and the post's own count is always the biggest.
+  let best = 0;
   for (const n of el.querySelectorAll(SEL.countLeaf)) {
     if (n.childElementCount > 0) continue; // leaf text only, so comment bodies can't match
     const m = re.exec(n.textContent ?? "");
-    if (m) return parseCount(m[1]);
+    if (m) best = Math.max(best, parseCount(m[1]));
   }
   for (const n of el.querySelectorAll("[aria-label]")) {
     const m = re.exec(n.getAttribute("aria-label") ?? "");
-    if (m) return parseCount(m[1]);
+    if (m) best = Math.max(best, parseCount(m[1]));
   }
-  return 0;
+  return best;
 }
 
 /** An element's own text, ignoring any descendant elements' text (an icon can sit beside the word without hiding it). */

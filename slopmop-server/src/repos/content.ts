@@ -45,9 +45,64 @@ export class ContentRepo {
     await this.d.db.execute(UPSERT_CHECK, args);
   }
 
+  /** One stored post by its full content id, or a prefix of it (null when none, "ambiguous" when a prefix matches several). */
+  async find(network: string, idOrPrefix: string): Promise<StoredContent | "ambiguous" | null> {
+    const r = await this.d.db.execute(
+      `SELECT content_id, native_id, text_len, model, ai_likelihood, dimensions, surface, engagement, scored_at, first_seen, last_seen, checks, engagement_at_score, next_recheck_at FROM content WHERE network = ? AND content_id LIKE ? LIMIT 2`,
+      [network, `${idOrPrefix}%`],
+    );
+    if (r.rows.length > 1) return "ambiguous";
+    const row = r.rows[0];
+    if (!row) return null;
+    return {
+      contentId: String(row.content_id),
+      nativeId: (row.native_id as string | null) ?? null,
+      textLen: num(row.text_len),
+      model: (row.model as string | null) ?? null,
+      aiLikelihood: row.ai_likelihood == null ? null : num(row.ai_likelihood),
+      dimensions: parseJson<Record<string, Dimension>>(row.dimensions),
+      surface: parseJson<Record<string, number>>(row.surface),
+      engagement: parseJson<{ reactions: number; comments: number; reposts: number }>(row.engagement),
+      scoredAt: row.scored_at == null ? null : num(row.scored_at),
+      firstSeen: num(row.first_seen),
+      lastSeen: num(row.last_seen),
+      checks: num(row.checks),
+      engagementAtScore: row.engagement_at_score == null ? null : num(row.engagement_at_score),
+      nextRecheckAt: row.next_recheck_at == null ? null : num(row.next_recheck_at),
+    };
+  }
+
+  /** Every scored post's answers, for asking "what would this setting change do to the rest?". */
+  async corpus(network: string, limit: number): Promise<{ dimensions: Record<string, Dimension>; aiLikelihood: number; engagement: { reactions: number; comments: number; reposts: number } | null }[]> {
+    const r = await this.d.db.execute(`SELECT ai_likelihood, dimensions, engagement FROM content WHERE network = ? AND dimensions IS NOT NULL AND ai_likelihood IS NOT NULL ORDER BY last_seen DESC LIMIT ?`, [network, limit]);
+    const out = [];
+    for (const row of r.rows) {
+      const dimensions = parseJson<Record<string, Dimension>>(row.dimensions);
+      if (dimensions) out.push({ dimensions, aiLikelihood: num(row.ai_likelihood), engagement: parseJson<{ reactions: number; comments: number; reposts: number }>(row.engagement) });
+    }
+    return out;
+  }
+
   async exists(network: string, contentId: string): Promise<boolean> {
     return (await this.d.db.execute(`SELECT 1 AS x FROM content WHERE network = ? AND content_id = ?`, [network, contentId])).rows.length > 0;
   }
+}
+
+export interface StoredContent {
+  contentId: string;
+  nativeId: string | null;
+  textLen: number;
+  model: string | null;
+  aiLikelihood: number | null;
+  dimensions: Record<string, Dimension> | null;
+  surface: Record<string, number> | null;
+  engagement: { reactions: number; comments: number; reposts: number } | null;
+  scoredAt: number | null;
+  firstSeen: number;
+  lastSeen: number;
+  checks: number;
+  engagementAtScore: number | null;
+  nextRecheckAt: number | null;
 }
 
 /** A verdict column is only overwritten when this check actually scored (a reused verdict leaves the stored one alone). */

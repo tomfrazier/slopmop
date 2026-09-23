@@ -3,6 +3,9 @@ import type { Ctx, Route } from "./ctx.js";
 import { StorageNotConfigured } from "./db/types.js";
 import { corsHeaders, HttpError, json, originAllowed } from "./http.js";
 import { clientsRoute } from "./routes/clientsRoute.js";
+import { devicesRoute } from "./routes/devicesRoute.js";
+import { limitsRoute } from "./routes/limitsRoute.js";
+import { reviewRoute } from "./routes/reviewRoute.js";
 import { exportRoute, statsRoute } from "./routes/statsRoute.js";
 import { adminManifestRoute, manifestRoute } from "./routes/manifestRoute.js";
 import { scoringRoute } from "./routes/scoringRoute.js";
@@ -26,6 +29,9 @@ const ROUTES: Record<Route, { methods: readonly Method[]; handler: Handler }> = 
   export: { methods: ["GET"], handler: exportRoute },
   stats: { methods: ["GET"], handler: statsRoute },
   clients: { methods: ["GET", "POST"], handler: clientsRoute },
+  devices: { methods: ["GET"], handler: devicesRoute },
+  limits: { methods: ["GET", "POST"], handler: limitsRoute },
+  review: { methods: ["POST"], handler: reviewRoute },
   weights: { methods: ["GET", "POST"], handler: weightsRoute },
   scoring: { methods: ["GET", "POST"], handler: scoringRoute },
   manifest: { methods: ["GET"], handler: manifestRoute },

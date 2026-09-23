@@ -1,11 +1,10 @@
 import type { Ctx } from "../ctx.js";
 import { HttpError, json, readJson } from "../http.js";
 import type { Dimension } from "../jev.js";
-import { MANIFEST_DEFAULTS, validateManifest, type ManifestValues } from "../manifest.js";
-import { validateScoring } from "../scoringStore.js";
-import { simulate, type SimLive } from "../simulate.js";
-import { TELL_IDS, validateWeights } from "../weights.js";
+import { simulate } from "../simulate.js";
+import { TELL_IDS } from "../weights.js";
 import { requireAdmin } from "./shared.js";
+import { simLive, type Draft } from "./simLive.js";
 
 const ANSWER_IDS = [...TELL_IDS, "humanVoice", "usefulness"];
 const unit = (v: unknown, what: string): number => {
@@ -32,22 +31,6 @@ export async function simulateRoute(request: Request, ctx: Ctx): Promise<Respons
   const e = (body.engagement ?? {}) as { reactions?: unknown; comments?: unknown; reposts?: unknown };
   const input = { dimensions, aiLikelihood: unit(body.aiLikelihood ?? 0.9, "aiLikelihood"), engagement: { reactions: count(e.reactions, "reactions"), comments: count(e.comments, "comments"), reposts: count(e.reposts, "reposts") } };
 
-  const draft = (body.draft ?? {}) as { weights?: unknown; scoring?: unknown; manifest?: unknown };
-  const used = { weights: draft.weights !== undefined, scoring: draft.scoring !== undefined, manifest: draft.manifest !== undefined };
-  const weights = used.weights ? validateWeights(draft.weights) : (await ctx.weights.current()).weights;
-  const scoring = used.scoring ? validateScoring(draft.scoring) : await ctx.scoring.current();
-  const overrides = used.manifest ? validateManifest(draft.manifest) : await ctx.manifest.overrides();
-  for (const problem of [weights, scoring, overrides]) if (typeof problem === "string") throw new HttpError(422, "invalid_input", problem);
-  const values = { ...MANIFEST_DEFAULTS, ...(overrides as ManifestValues) };
-  const live: SimLive = {
-    weights: weights as SimLive["weights"],
-    scoring: scoring as SimLive["scoring"],
-    aiDampen: Number(values.aiDampen),
-    minMeanConfidence: Number(values.minMeanConfidence),
-    yellowFraction: Number(values.yellowFraction),
-    displayPossibly: Number(values.displayPossibly),
-    displayLikely: Number(values.displayLikely),
-    displayFullMultiple: Number(values.displayFullMultiple),
-  };
+  const { live, used } = await simLive(ctx, (body.draft ?? {}) as Draft);
   return json(200, { result: simulate(input, live), used });
 }

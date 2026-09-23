@@ -17,7 +17,7 @@ export function table(cols, rows, empty = "Nothing yet.") {
       "table",
       null,
       el("thead", null, el("tr", null, cols.map((c) => el("th", { class: c.r ? "r" : "" }, c.h)))),
-      el("tbody", null, rows.map((r) => el("tr", null, cols.map((c) => el("td", { class: c.r ? "r" : "" }, c.v(r)))))),
+      el("tbody", null, rows.map((r) => el("tr", null, cols.map((c) => el("td", { class: [c.r ? "r" : "", c.c || ""].join(" ").trim() }, c.v(r)))))),
     ),
   );
 }

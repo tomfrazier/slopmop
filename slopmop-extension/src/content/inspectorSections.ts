@@ -98,9 +98,15 @@ export function scoreZones(data: InspectData, e: Explain, score: number, vote: V
     ...(hides ? [h("div", { class: "cut", style: `left:${likely}`, title: "Posts past this line are hidden" })] : []),
     h("div", { class: "dot", style: `left:${Math.min(100, Math.max(0, dotLeft))}%;background:${dotColor}` }),
   );
-  // Laid out as three natural-width labels (start / centre / end), never sized to their own zone's width, so a narrow
-  // zone (aggressive sensitivities can squeeze "Possibly" down a great deal) never clips its label against the panel edge.
-  const labels = h("div", { class: "zlabels" }, h("span", { class: "zl start" }, "Looks fine"), h("span", { class: "zl mid" }, "Possibly"), h("span", { class: "zl end" }, hides ? "Likely (hidden)" : "Likely"));
+  // "Fine" sits at the left edge, "Likely" at the right, and "Possibly" starts where the yellow band starts (never sized to the
+  // band, so a short band can't clip it; the CSS keeps it inside the bar's right edge).
+  const labels = h(
+    "div",
+    { class: "zlabels" },
+    h("span", { class: "zl start" }, "Fine"),
+    h("span", { class: "zl mid", style: `--x:${possibly}` }, "Possibly"),
+    h("span", { class: "zl end" }, hides ? "Likely (hidden)" : "Likely"),
+  );
   return [zones, labels, ...(blocked ? [h("p", { class: "note" }, "The score is past a line, but this post isn't flagged: see the note above.")] : [])];
 }
 
