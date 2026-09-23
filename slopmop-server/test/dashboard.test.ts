@@ -13,7 +13,7 @@ const button = (text: string) => $$("button").find((b) => b.textContent === text
 const headings = () => $$(".section h2").map((h) => h.textContent);
 
 let h: Awaited<ReturnType<typeof makeHarness>>;
-const ROUTES: Record<string, Route> = { stats: "stats", weights: "weights", scoring: "scoring", manifest: "adminManifest", tuner: "tuner", simulate: "simulate", clients: "clients", export: "export" };
+const ROUTES: Record<string, Route> = { stats: "stats", weights: "weights", scoring: "scoring", manifest: "adminManifest", tuner: "tuner", simulate: "simulate", clients: "clients", export: "export", devices: "devices", limits: "limits" };
 
 /** The dashboard's fetches go to the real handlers, so this exercises the true request and response shapes. */
 function serveAdminApi() {
@@ -31,9 +31,10 @@ async function seed() {
   }
 }
 
-async function openDashboard(token: string | null) {
+async function openDashboard(token: string | null, page = "overview") {
   document.body.innerHTML = '<main id="app"></main><div id="tip" hidden></div>';
   sessionStorage.clear();
+  location.hash = `#/${page}`;
   if (token) sessionStorage.setItem("slopmop-admin-token", token);
   vi.resetModules();
   await import("../public/admin/app.js" as string);
@@ -64,16 +65,32 @@ describe("admin dashboard", () => {
 
   it("signs in and draws every section from the server's real data", async () => {
     await openDashboard(KEY);
-    expect(headings()).toEqual(["How a score is made", "Tell weights", "Scoring", "Threshold tuner", "Client settings", "Networks", "What Jev is seeing", "Community", "Devices", "Disabled clients", "Errors and limit hits"]);
+    expect($$(".side a").map((a) => a.textContent)).toEqual(["Overview", "Devices", "Scoring", "Defaults", "Posts and votes"]);
+    expect($(".side a[aria-current=page]")!.textContent).toBe("Overview");
+    expect(headings()).toEqual(["Busiest devices", "Errors and limit hits"]);
     expect($$(".kpi")).toHaveLength(12);
     expect($$(".kpi .l").map((e) => e.textContent)).toContain("Checks");
-    expect($$("svg.chart").length).toBeGreaterThanOrEqual(6);
-    expect($$('input[aria-label^="Disable device"]')).toHaveLength(3); // one per seeded install
+    expect($$("svg.chart").length).toBeGreaterThanOrEqual(4);
+    const on = async (page: string) => {
+      $(`.side a[href="#/${page}"]`)!.click();
+      location.hash = `#/${page}`;
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+      await tick(200);
+    };
+    await on("scoring");
+    expect(headings()).toEqual(["How a score is made", "Tell weights", "Scoring", "Threshold tuner"]);
     expect($$(".wrow")).toHaveLength(11); // one slider per tell, plus the two counter-tells
+    await on("defaults");
+    expect(headings()).toEqual(["Client settings"]);
+    expect($$(".card h2").map((e) => e.textContent)).toContain("Default limits");
+    await on("posts");
+    expect(headings()).toEqual(["Networks", "What Jev is seeing", "Community"]);
+    await on("devices");
+    expect($$('input[aria-label^="Disable device"]')).toHaveLength(3); // every seeded install, not just a top few
   });
 
   it("edits the tell weights live: change, save, and the server now uses them", async () => {
-    await openDashboard(KEY);
+    await openDashboard(KEY, "scoring");
     expect(($(".card .pill") as HTMLElement).textContent).toMatch(/Defaults/);
     const first = $(".wrow input[type=number]") as HTMLInputElement;
     first.value = "2.5";
@@ -87,7 +104,7 @@ describe("admin dashboard", () => {
   });
 
   it("keeps an edit in progress when the page redraws", async () => {
-    await openDashboard(KEY);
+    await openDashboard(KEY, "scoring");
     const first = $(".wrow input[type=number]") as HTMLInputElement;
     first.value = "1.7";
     first.dispatchEvent(new Event("input", { bubbles: true }));
@@ -96,23 +113,47 @@ describe("admin dashboard", () => {
     expect(($(".wrow input[type=number]") as HTMLInputElement).value).toBe("1.7");
   });
 
-  it("disables a device from its checkbox, lists it, and can re-enable it", async () => {
-    await openDashboard(KEY);
+  it("disables a device from its checkbox on the Devices page, and can re-enable it", async () => {
+    await openDashboard(KEY, "devices");
+    await tick(200);
     const box = $('input[aria-label^="Disable device"]') as HTMLInputElement;
     box.checked = true;
     box.dispatchEvent(new Event("change", { bubbles: true }));
-    await tick(150);
+    await tick(250);
     expect(await h.ctx.store.clients.listDisabled()).toHaveLength(1);
-    const reenable = $('input[aria-label^="Re-enable device"]') as HTMLInputElement;
-    expect(reenable).not.toBeNull();
-    reenable.checked = false;
-    reenable.dispatchEvent(new Event("change", { bubbles: true }));
-    await tick(150);
+    expect($$(".pill.error").map((p) => p.textContent)).toContain("disabled");
+    const again = $$('input[aria-label^="Disable device"]').find((b) => (b as HTMLInputElement).checked) as HTMLInputElement;
+    again.checked = false;
+    again.dispatchEvent(new Event("change", { bubbles: true }));
+    await tick(250);
     expect(await h.ctx.store.clients.listDisabled()).toHaveLength(0);
   });
 
+  it("finds a device by part of its id, and sets its own limit from the Devices page", async () => {
+    await openDashboard(KEY, "devices");
+    await tick(200);
+    const ids = $$("tbody code").map((c) => c.textContent!);
+    expect(ids).toHaveLength(3);
+    const search = $('input[type=search]') as HTMLInputElement;
+    search.value = ids[1].slice(1, 5);
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    await tick(600);
+    expect($$("tbody code").map((c) => c.textContent)).toContain(ids[1]);
+    expect($$("tbody code").length).toBeLessThan(3);
+    $$("button").find((b) => b.textContent === "Limits")!.click();
+    await tick(50);
+    const [daily] = $$("tr.editrow input") as HTMLInputElement[];
+    daily.value = "777";
+    $$("tr.editrow button").find((b) => b.textContent === "Save")!.click();
+    await tick(300);
+    expect($$(".pill").map((p) => p.textContent)).toContain("own limits");
+    const found = await h.ctx.store.clients.list({ q: "", status: "custom", sort: "lastSeen", dir: "desc", limit: 10, offset: 0 });
+    expect(found.devices).toHaveLength(1);
+    expect(found.devices[0].dailyLimit).toBe(777);
+  });
+
   it("edits the thresholds and reader-response model, and the server serves the new thresholds", async () => {
-    await openDashboard(KEY);
+    await openDashboard(KEY, "scoring");
     const mild = $('input[aria-label="Mild"]') as HTMLInputElement;
     expect(mild.value).toBe("0.22");
     mild.value = "0.3";
@@ -127,7 +168,7 @@ describe("admin dashboard", () => {
   });
 
   it("edits a client setting, shows its default, and resets", async () => {
-    await openDashboard(KEY);
+    await openDashboard(KEY, "defaults");
     const minChars = $('input[aria-label="Shortest post to score (characters)"]') as HTMLInputElement;
     expect(minChars.value).toBe("200");
     minChars.value = "250";
@@ -145,7 +186,7 @@ describe("admin dashboard", () => {
     const dim = (v: number) => ({ ...Object.fromEntries(["contrastFraming", "emptyEvaluation", "tradeoffFreePromises", "formalHedging", "hypeMarketing", "manneredProse", "formulaicHook", "manufacturedNarrative", "engagementBait", "humanVoice", "usefulness"].map((id) => [id, { value: v, confidence: 0.9 }])) });
     const labels = [...Array.from({ length: 16 }, (_, i) => ({ urn: `p${i}`, label: "probably", verdict: { model: "j", aiLikelihood: 0.9, dimensions: dim(0.35 + (i % 5) * 0.05) } })), ...Array.from({ length: 16 }, (_, i) => ({ urn: `n${i}`, label: "no", verdict: { model: "j", aiLikelihood: 0.9, dimensions: dim(0.02 + (i % 5) * 0.01) } }))];
     await h.call("tuner", { import: labels }, { method: "POST", headers: { authorization: `Bearer ${KEY}` } });
-    await openDashboard(KEY);
+    await openDashboard(KEY, "scoring");
     expect(document.body.textContent).toMatch(/32 posts: 16 "probably", 16 "no"/);
     expect(document.body.textContent).toMatch(/Suggested thresholds/);
     const before = (await h.call("manifest")).body.thresholds;
@@ -163,7 +204,7 @@ describe("admin dashboard", () => {
   });
 
   it("switches the tuner to the community set with its own controls", async () => {
-    await openDashboard(KEY);
+    await openDashboard(KEY, "scoring");
     button("Community consensus").click();
     await tick(200);
     expect($('input[aria-label="Voters needed per post"], input[aria-label="Voters needed"]')).not.toBeNull();
@@ -171,7 +212,7 @@ describe("admin dashboard", () => {
   });
 
   it("explains the formula with today's numbers, runs the simulator, and previews an unsaved edit without saving it", async () => {
-    await openDashboard(KEY);
+    await openDashboard(KEY, "scoring");
     await tick(400);
     expect(document.body.textContent).toMatch(/Tell average.*Slop.*Shield.*AI dampener.*Score.*What you see/s);
     expect(document.body.textContent).toMatch(/Likely slop starts at 0\.1 \(Aggressive\), 0\.18 \(Moderate\) or 0\.22 \(Mild\)/);
@@ -195,7 +236,7 @@ describe("admin dashboard", () => {
   });
 
   it("logs scoring changes with their note, and loads an earlier version back into the editor without saving", async () => {
-    await openDashboard(KEY);
+    await openDashboard(KEY, "scoring");
     const gain = () => $('input[aria-label="Slop gain"]') as HTMLInputElement;
     gain().value = "3";
     gain().dispatchEvent(new Event("input"));
