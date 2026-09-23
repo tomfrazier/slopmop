@@ -117,12 +117,12 @@ describe("the client uses the server's policy", () => {
   it("stays under the server's per-minute limit by holding requests back, not by asking and being refused", async () => {
     await boot({ maxConcurrent: 4, ratePerMinute: 2 });
     answer = () => ({ status: 200, body: verdict({ maxConcurrent: 4, ratePerMinute: 2 }) });
-    const first = [send(msg(0)), send(msg(1))];
-    const third = send(msg(2));
-    await Promise.all(first);
+    // Which two of the three reach the server first depends on how their (async) cache keys finish hashing, so the test doesn't
+    // name them: it only checks that two are sent and the other is held back for the minute window rather than sent and refused.
+    const all = [send(msg(0)), send(msg(1)), send(msg(2))];
     await tick(400);
-    expect(calls).toHaveLength(2); // the third waits for the minute window rather than being sent
-    void third; // released when the window frees; left pending on purpose
+    expect(calls).toHaveLength(2);
+    void all; // the held one is released when the window frees; left pending on purpose
   });
 });
 
