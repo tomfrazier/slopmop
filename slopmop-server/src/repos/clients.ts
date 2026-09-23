@@ -29,6 +29,8 @@ export interface DeviceRow {
   /** This install's own limits; null = following the default. */
   dailyLimit: number | null;
   hourlyLimit: number | null;
+  /** The admin's name for this device, if it has one. */
+  alias: string | null;
 }
 
 /** Per-install controls: the admin's kill switch and the requests-per-minute window. */
@@ -72,10 +74,15 @@ export class ClientRepo {
     const q = o.q.toLowerCase().replace(/[^0-9a-f]/g, "");
     const where: string[] = [];
     const args: SqlArg[] = [];
-    if (q) {
+    const text = o.q.trim().toLowerCase();
+    if (text) {
       // A device id is the first 8 characters of the hash: a short search matches anywhere in it, a longer one is a prefix of the hash.
-      where.push(q.length > DEVICE_ID_CHARS ? `i.install_hash LIKE ?` : `substr(i.install_hash, 1, ${DEVICE_ID_CHARS}) LIKE ?`);
-      args.push(q.length > DEVICE_ID_CHARS ? `${q}%` : `%${q}%`);
+      // Whatever was typed is also looked for in the alias.
+      const asId = q === text && q.length > 0;
+      const idTest = q.length > DEVICE_ID_CHARS ? `i.install_hash LIKE ?` : `substr(i.install_hash, 1, ${DEVICE_ID_CHARS}) LIKE ?`;
+      where.push(asId ? `(${idTest} OR LOWER(i.alias) LIKE ? ESCAPE '\\')` : `LOWER(i.alias) LIKE ? ESCAPE '\\'`);
+      if (asId) args.push(q.length > DEVICE_ID_CHARS ? `${q}%` : `%${q}%`);
+      args.push(`%${likeEscape(text)}%`);
     }
     const t = this.d.now();
     const filters: Record<DeviceQuery["status"], string> = {
@@ -90,7 +97,7 @@ export class ClientRepo {
     const order = { lastSeen: "i.last_seen", firstSeen: "i.first_seen", checks: "i.checks", today: "today", errors: "errors", votes: "votes", limitHits: "i.limit_hits" }[o.sort] ?? "i.last_seen";
     const total = num((await this.d.db.execute(`SELECT COUNT(*) n FROM installs i WHERE ${cond}`, args)).rows[0]?.n);
     const r = await this.d.db.execute(
-      `SELECT i.install_hash h, i.first_seen, i.last_seen, i.checks, i.limit_hits, i.disabled, i.disabled_reason, i.daily_limit, i.hourly_limit,
+      `SELECT i.install_hash h, i.first_seen, i.last_seen, i.checks, i.limit_hits, i.disabled, i.disabled_reason, i.daily_limit, i.hourly_limit, i.alias,
               COALESCE(u.checks, 0) today,
               (SELECT COUNT(*) FROM events e WHERE e.install_hash = i.install_hash AND e.kind = 'error') errors,
               (SELECT COUNT(*) FROM votes v WHERE v.install_hash = i.install_hash) votes
@@ -113,8 +120,14 @@ export class ClientRepo {
         disabledReason: (row.disabled_reason as string | null) ?? null,
         dailyLimit: row.daily_limit == null ? null : num(row.daily_limit),
         hourlyLimit: row.hourly_limit == null ? null : num(row.hourly_limit),
+        alias: (row.alias as string | null) ?? null,
       })),
     };
+  }
+
+  /** Names an install (or, with null, removes the name). */
+  async setAlias(hash: string, alias: string | null): Promise<void> {
+    await this.d.db.execute(`UPDATE installs SET alias = ? WHERE install_hash = ?`, [alias, hash]);
   }
 
   async listDisabled(): Promise<DisabledClient[]> {
@@ -128,6 +141,9 @@ export class ClientRepo {
     }));
   }
 }
+
+/** A search term made safe to use inside LIKE: % and _ match themselves. */
+export const likeEscape = (t: string) => t.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 /** The short id the dashboard shows for an install. */
 export const deviceId = (installHash: string) => installHash.slice(0, DEVICE_ID_CHARS);

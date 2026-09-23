@@ -15,8 +15,8 @@ export const percentile = (sorted: number[], p: number) => (sorted.length ? sort
 
 /** The most recent errors and refused requests. */
 export async function recentProblems(s: Scope) {
-  const rows = await s.q(`SELECT at, network, kind, detail, install_hash FROM events WHERE kind IN ('error','limited') AND at >= ?${s.netSql()} ORDER BY at DESC LIMIT ${PROBLEMS_LIMIT}`, [s.since, ...s.netArgs()]);
-  return rows.map((r) => ({ at: num(r.at), network: String(r.network), kind: String(r.kind), detail: (r.detail as string | null) ?? null, device: deviceId(String(r.install_hash)) }));
+  const rows = await s.q(`SELECT e.at, e.network, e.kind, e.detail, e.install_hash, i.alias FROM events e LEFT JOIN installs i ON i.install_hash = e.install_hash WHERE e.kind IN ('error','limited') AND e.at >= ?${s.netSql("e.network")} ORDER BY e.at DESC LIMIT ${PROBLEMS_LIMIT}`, [s.since, ...s.netArgs()]);
+  return rows.map((r) => ({ at: num(r.at), network: String(r.network), kind: String(r.kind), detail: (r.detail as string | null) ?? null, device: deviceId(String(r.install_hash)), alias: (r.alias as string | null) ?? null }));
 }
 
 /** How much is stored, so the dashboard can show the database's footprint. */
