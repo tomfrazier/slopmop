@@ -1,5 +1,6 @@
 import { TypeSafeClient } from "@typesafe-ai/sdk";
 import type { Env } from "./config.js";
+import { Gate } from "./gate.js";
 import { askJev } from "./jevRequest.js";
 import { chooseRoute } from "./jevRoute.js";
 import { DEFAULT_TUNING, tuningFrom, type Tuning } from "./jevTuning.js";
@@ -31,5 +32,6 @@ export function createJev(env: Env): JevBackend | null {
   if (!route) return null;
   const client = new TypeSafeClient({ apiKey: route.apiKey, baseURL: route.baseURL, logLevel: "off", retry: { maxRetries: 0 } });
   const tuning = tuningFrom(env);
-  return { via: route.via, model: route.model, score: (input) => judge(client, route.model, input, tuning) };
+  const gate = new Gate(tuning.maxConcurrent, tuning.queueWaitMs);
+  return { via: route.via, model: route.model, score: (input) => gate.run(() => judge(client, route.model, input, tuning)) };
 }

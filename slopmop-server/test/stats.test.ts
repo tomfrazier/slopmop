@@ -55,7 +55,7 @@ describe.each(ADAPTERS)("GET /api/v1/admin/stats (%s)", (kind) => {
     expect(body.tells.find((t: any) => t.id === "contrastFraming").avg).toBeCloseTo(0.5, 3);
     expect(body.aiHistogram[9].posts).toBe(2); // ai 0.9 -> top bucket
     expect(body.hourOfDay[15].checks).toBe(3); // the test clock is 15:00 UTC
-    expect(body.problems).toEqual([expect.objectContaining({ kind: "error", detail: "AuthenticationError" })]);
+    expect(body.problems).toEqual([expect.objectContaining({ kind: "error", detail: "AuthenticationError 401 - 401 bad key" })]);
     const b = body.devices.find((d: any) => d.checks === 2);
     expect(b).toMatchObject({ scored: 1, votes: 1 });
     expect(body.posts.mostFlagged[0]).toMatchObject({ contentId: a.body.contentId, votes: { probably: 1, no: 1 } });
