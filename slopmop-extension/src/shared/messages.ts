@@ -11,6 +11,8 @@ export type Msg =
   | ({ type: "debug" } & PageSeen)
   | { type: "getDebug"; tabId?: number }
   | { type: "myDebug" }
+  /** Asks the server how many checks this install has left (and its device id) without spending one. */
+  | { type: "refreshUsage" }
   | { type: "vote"; record: LabelRecord }
   | { type: "unvote"; urn: string }
   | { type: "syncLabels" }

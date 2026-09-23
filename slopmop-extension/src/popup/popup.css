@@ -33,3 +33,10 @@ footer{padding:var(--space-5) var(--space-6);color:var(--text-faint);font:var(--
 .usage-box .usage-row{display:flex;align-items:baseline;gap:var(--space-3)}.usage-box b{font:var(--weight-semibold) var(--text-xl)/1.1 var(--font-display);letter-spacing:var(--tracking-tight);font-variant-numeric:tabular-nums}.usage-box span{color:var(--text-faint);font:var(--type-mono)}
 .usage-box .meter{height:4px;border-radius:2px;background:var(--paper-200);margin-top:var(--space-4);overflow:hidden}.usage-box .meter i{display:block;height:100%;width:0;border-radius:2px;background:var(--mop-500);transition:width var(--dur-slow) var(--ease-standard)}
 .usage-box.full .meter i{background:var(--red-500)}.usage-box.full b{color:var(--red-500)}
+
+/* the device id: there so a user can quote it, not to be looked at */
+.ident{display:grid;gap:var(--space-2)}
+.device{all:unset;cursor:pointer;justify-self:start;margin-left:30px;font:var(--type-mono-label);letter-spacing:var(--tracking-caps);color:var(--ink-300);transition:color var(--dur-fast) var(--ease-standard)}
+.device:hover,.device:focus-visible{color:var(--ink-500)}
+.device:focus-visible{box-shadow:var(--shadow-focus);border-radius:var(--radius-xs)}
+.problem{color:var(--red-700);overflow-wrap:anywhere}

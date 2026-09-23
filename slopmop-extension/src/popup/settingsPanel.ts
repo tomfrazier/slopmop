@@ -5,7 +5,7 @@ import { $ } from "../shared/pageDom";
 const modeButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-mode]")];
 const NOTES: Record<Mode, string> = {
   hide: "Posts that look like slop fold into a small paper strip. Click to unfold.",
-  highlight: "Nothing is hidden. Possibly slop: yellow border. Likely slop: red border.",
+  highlight: "Nothing is hidden. The mop icon on a post turns yellow for possibly slop and red for likely slop.",
 };
 
 const sensButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-sens]")];

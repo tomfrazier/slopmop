@@ -4,7 +4,8 @@ import { getSettings } from "../shared/settings";
 import type { JudgeResponse } from "../shared/types";
 import { refreshBadge } from "./badge";
 import { enqueue, prioritize } from "./queue";
-import { blockedHold, dailyLimitHold } from "./serverState";
+import { blockedHold, cooldownHold, dailyLimitHold } from "./serverState";
+import { refreshUsage } from "./usage";
 import { loadStats, recordStat, statsReply } from "./stats";
 import { allTabs, blank, getTab, updateTab } from "./tabs";
 import { watchManifest } from "../shared/manifest";
@@ -25,7 +26,7 @@ async function judge(m: Extract<Msg, { type: "judge" }>, tabId: number | undefin
     return cached;
   }
   // Don't ask the server while it has said no: the daily counter hasn't reset, or the admin disabled this install.
-  const held = (await blockedHold()) ?? (await dailyLimitHold());
+  const held = (await blockedHold()) ?? (await dailyLimitHold()) ?? (await cooldownHold());
   if (held) {
     void updateTab(tabId, (t) => ({ ...t, errors: t.errors + 1, lastError: held.message }));
     return null;
@@ -49,6 +50,7 @@ const handlers: Handlers = {
   },
   debug: (m, tabId) => updateTab(tabId, (s) => ({ ...s, detected: m.detected, ads: m.ads, own: m.own, skipped: m.skipped })),
   getDebug: (m) => (m.tabId === undefined ? allTabs() : getTab(m.tabId)),
+  refreshUsage: () => refreshUsage(),
   myDebug: (_m, tabId) => (tabId === undefined ? blank() : getTab(tabId)),
   vote: (m) => saveVote(m.record),
   unvote: (m) => clearVote(m.urn),

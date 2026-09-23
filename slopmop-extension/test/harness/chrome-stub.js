@@ -5,11 +5,11 @@
     mid: { model: "stub", aiLikelihood: 0.8, dimensions: { contrastFraming: { value: 0.5, confidence: 0.9 }, emptyEvaluation: { value: 0.4, confidence: 0.9 }, tradeoffFreePromises: { value: 0.1, confidence: 0.9 }, formalHedging: { value: 0.3, confidence: 0.9 }, hypeMarketing: { value: 0.2, confidence: 0.9 }, manneredProse: { value: 0.2, confidence: 0.9 }, formulaicHook: { value: 0.4, confidence: 0.9 }, manufacturedNarrative: { value: 0.3, confidence: 0.9 }, engagementBait: { value: 0.3, confidence: 0.9 }, humanVoice: { value: 0.4, confidence: 0.9 }, usefulness: { value: 0.4, confidence: 0.9 } } },
     human: { model: "stub", aiLikelihood: 0.1, dimensions: { contrastFraming: { value: 0.9, confidence: 0.9 }, emptyEvaluation: { value: 0.9, confidence: 0.9 }, tradeoffFreePromises: { value: 0.9, confidence: 0.9 }, formalHedging: { value: 0.9, confidence: 0.9 }, hypeMarketing: { value: 0.9, confidence: 0.9 }, manneredProse: { value: 0.9, confidence: 0.9 }, formulaicHook: { value: 0.9, confidence: 0.9 }, manufacturedNarrative: { value: 0.9, confidence: 0.9 }, engagementBait: { value: 0.9, confidence: 0.9 }, humanVoice: { value: 1, confidence: 0.9 }, usefulness: { value: 0.9, confidence: 0.9 } } },
   })[canned];
-  const store = { sync: { settings: { enabled: true, acknowledged: true, mode: new URLSearchParams(location.search).get("mode") || "hide", sensitivity: new URLSearchParams(location.search).get("sens") || "moderate", debug: true } }, local: {} };
+  const store = { local: { usage: { used: 37, limit: 1000, remaining: 963, resetsAt: new Date(Date.now() + 6 * 3600_000).toISOString(), device: "a1b2c3d4" }, lastProblem: new URLSearchParams(location.search).has("problem") ? { at: Date.now() - 120000, message: "server 404: https://api.slopmop.lol/api/v1 has no such page. This copy of Slop Mop may be pointed at the wrong server address." } : undefined }, sync: { settings: { enabled: true, acknowledged: true, mode: new URLSearchParams(location.search).get("mode") || "hide", sensitivity: new URLSearchParams(location.search).get("sens") || "moderate", debug: true } } };
   window.__store = store;
   const listeners = [];
   const area = (name) => ({
-    get: async (k) => (k ? { [k]: store[name][k] } : { ...store[name] }),
+    get: async (k) => (k ? Object.fromEntries([].concat(k).map((x) => [x, store[name][x]])) : { ...store[name] }),
     set: async (o) => { const changes = {}; for (const [k, v] of Object.entries(o)) { changes[k] = { oldValue: store[name][k], newValue: v }; store[name][k] = v; } listeners.forEach((l) => l(changes, name)); },
   });
   let day = new Date().toISOString().slice(0, 10);
@@ -23,7 +23,8 @@
   window.chrome = {
     storage: { sync: area("sync"), local: area("local"), onChanged: { addListener: (l) => listeners.push(l) } },
     runtime: {
-      id: "harness", // feed.ts's extensionAlive() checks this; without it the content script shuts itself down before scanning
+      id: "harness",
+      getManifest: () => ({ version: "harness" }), // feed.ts's extensionAlive() checks this; without it the content script shuts itself down before scanning
       getURL: (p) => p,
       sendMessage: async (m) => {
         (window.__msgs = window.__msgs || []).push(m.type);

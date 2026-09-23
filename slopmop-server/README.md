@@ -278,6 +278,11 @@ The extension's "check this draft" button in the LinkedIn composer sends a draft
 2. If it needs different criteria, add a per-network overlay to the tell library in `src/traits.ts` / `src/questions.ts`.
 3. Write the extension's content script for it; it sends `network` and the post text to the same endpoints.
 
+## Limits: defaults and per-install overrides
+Every install follows the **default limits**: checks per install per UTC day (`DAILY_CHECK_LIMIT`, 250) and checks per source IP per UTC hour (`IP_HOURLY_LIMIT`, 250). Both are editable live in the admin (Defaults) without a redeploy; the environment values are the built-in fallback ("Use the built-in defaults" returns to them). Any install can also have its **own** daily and/or hourly limit (Devices, then Limits on its row; an empty field follows the default). The overrides live on the `installs` row (`daily_limit`, `hourly_limit`, NULL = follow the default) and are read inside the same atomic cap statement, so concurrent requests still can't overshoot.
+
+`GET /api/v1/usage` and the `usage` block of every `/judge` answer include `device`, the same 8-character id the dashboard shows, so a user can quote it (the extension's popup shows it, faint, under the logo). Admin endpoints: `GET|POST /admin/limits` (defaults), `GET /admin/devices?q=&status=&sort=&dir=&limit=&offset=` (every install, searchable by any part of the device id) and `POST /admin/clients {device, dailyLimit?, hourlyLimit?, disabled?}`.
+
 ## Protecting /judge from scripted use
 
 An install id is just a random value the extension makes up; nothing stops a script from generating a fresh one per

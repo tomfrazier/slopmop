@@ -39,6 +39,8 @@ export interface Usage {
   remaining: number;
   /** ISO time the daily counter resets (next UTC midnight). */
   resetsAt: string;
+  /** The short id the server's admin dashboard shows for this install (absent from older servers). */
+  device?: string;
 }
 
 /** Contract with slopmop-server `POST /api/v1/judge`. Hand-maintained; nothing is imported across repos. */

@@ -2,7 +2,7 @@ import { SERVER_URL } from "../shared/config";
 import { SECOND_MS, TRANSIENT_STATUSES } from "../shared/constants";
 import { live } from "../shared/manifest";
 import { learnPolicy } from "./policy";
-import { DISABLED_MESSAGE, limitMessage, rememberBlocked, rememberDailyLimit } from "./serverState";
+import { DISABLED_MESSAGE, limitMessage, rememberBlocked, rememberCooldown, rememberDailyLimit } from "./serverState";
 import type { Attempt, ServerBody } from "./judgeTypes";
 
 /** The server's own explanation of an error, when it gave one (it always answers with {error, message}). */
@@ -37,6 +37,16 @@ export async function readJson<T>(res: Response): Promise<T> {
   }
 }
 
+const IP_LIMIT_DEFAULT_WAIT_S = 600;
+const IP_LIMIT_MAX_WAIT_S = 3600;
+
+/** "server 404" alone can't tell a wrong address from a server fault: say where we asked, and what a 404 usually means. */
+export function describeServerError(status: number, message?: string): string {
+  const where = `${SERVER_URL}/api/v1`;
+  if (status === 404 && !message) return `server 404: ${where} has no such page. This copy of Slop Mop may be pointed at the wrong server address.`;
+  return `server ${status}${message ? `: ${message}` : ""}`;
+}
+
 const looksLikeWebPage = (res: Response) => (res.headers.get("content-type") ?? "").includes("text/html");
 
 export const describeNetworkError = (e: unknown) =>
@@ -55,9 +65,19 @@ export async function interpretFailure(res: Response, backoffMs: number): Promis
     await rememberBlocked(error);
     return { kind: "stop", error };
   }
+  if (res.status === 403 && body.error === "datacenter_ip") {
+    return { kind: "stop", error: "Slop Mop can't check posts from a VPN or cloud network. Turn the VPN off and try again." };
+  }
+  if (res.status === 429 && body.error === "ip_rate_limited") {
+    // This network has used its hourly allowance: asking again sooner can't help, so wait as long as the server says.
+    const seconds = Math.min(Math.max(retryAfterSeconds(res) || IP_LIMIT_DEFAULT_WAIT_S, 1), IP_LIMIT_MAX_WAIT_S);
+    const error = `Too many checks from your network this hour. Checking resumes in about ${Math.ceil(seconds / 60)} min.`;
+    await rememberCooldown(error, seconds);
+    return { kind: "stop", error };
+  }
   learnPolicy(body.policy);
 
-  const error = looksLikeWebPage(res) ? new NotJsonError(res.status).message : `server ${res.status}${body.message ? `: ${body.message}` : ""}`;
+  const error = looksLikeWebPage(res) ? new NotJsonError(res.status).message : describeServerError(res.status, body.message);
   const asked = retryAfterSeconds(res);
   // When the server says how long to wait (the scoring model is busy), wait at least that long.
   const pauseMs = asked ? Math.min(Math.max(backoffMs, asked * SECOND_MS), live.values.maxRetryPauseMs) : backoffMs;
