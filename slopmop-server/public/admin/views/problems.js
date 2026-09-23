@@ -10,7 +10,7 @@ export const problemsTable = (d) =>
     [
       { h: "When", v: (r) => fmt.time(r.at) },
       { h: "What", v: (r) => el("span", { class: `pill ${r.kind}` }, r.kind === "limited" ? REFUSAL_NAMES[r.detail] || "daily limit" : "error") },
-      { h: "Detail", v: (r) => r.detail || "-" },
+      { h: "Detail", c: "detail", v: (r) => r.detail || "-" },
       { h: "Network", v: (r) => r.network },
       { h: "Device", v: deviceCode },
     ],

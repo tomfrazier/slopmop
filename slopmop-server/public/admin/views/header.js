@@ -1,7 +1,10 @@
 import { prefs, savePrefs, setToken } from "../api.js";
-import { el, mopMark } from "../dom.js";
+import { el } from "../dom.js";
 import { fmt, rangeLabel } from "../format.js";
 import { hooks } from "../hooks.js";
+import { pageInfo } from "../nav.js";
+
+const USES_RANGE = new Set(["overview", "posts"]); // the other sections aren't about a time range
 
 const RANGE_CHOICES = [["24h", "24h"], ["7d", "7d"], ["30d", "30d"], ["90d", "90d"]];
 
@@ -22,14 +25,15 @@ const networkSelect = (d) => {
 };
 
 /** Title, range and network pickers, auto-refresh, refresh, sign out. */
-export function header(d) {
+export function header(d, page = "overview") {
+  const info = pageInfo(page);
   return el(
     "div",
     { class: "top" },
-    el("div", { class: "title" }, mopMark(28), el("div", null, el("h1", null, "Slop Mop admin"), el("div", { class: "sub" }, `Updated ${fmt.time(d.generatedAt)} · all times UTC · ${rangeLabel(d.range)}`))),
+    el("div", { class: "title" }, el("div", null, el("h1", null, info.label), el("div", { class: "sub" }, `${info.note} · updated ${fmt.time(d.generatedAt)} · all times UTC${USES_RANGE.has(page) ? ` · ${rangeLabel(d.range)}` : ""}`))),
     el("div", { class: "grow" }),
-    segmented(RANGE_CHOICES, "range"),
-    networkSelect(d),
+    USES_RANGE.has(page) ? segmented(RANGE_CHOICES, "range") : null,
+    USES_RANGE.has(page) ? networkSelect(d) : null,
     el("label", null, el("input", { type: "checkbox", checked: prefs.refresh, onchange: (e) => { prefs.refresh = e.target.checked; savePrefs(); hooks.refresh(); } }), "Auto-refresh"),
     el("button", { onclick: () => hooks.refresh() }, "Refresh"),
     el("button", { onclick: () => { setToken(""); hooks.login(); } }, "Sign out"),

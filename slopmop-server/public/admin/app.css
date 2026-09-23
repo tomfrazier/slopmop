@@ -112,3 +112,28 @@ input[type=file] { font: var(--type-label); }
 .sim-result { margin-top: 14px; }
 @media (max-width: 560px) { .sim-row { grid-template-columns: 1fr 44px; } .sim-row input[type=range] { grid-column: 1 / -1; } }
 .wrap-table td { white-space: normal; vertical-align: top; }
+
+/* Sections: a side navigation and the section's content. */
+main { max-width: none; padding: 0; }
+.layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); min-height: 100vh; }
+.side { position: sticky; top: 0; align-self: start; height: 100vh; padding: var(--space-7) var(--space-5); border-right: var(--border-width) solid var(--line); background: var(--panel); display: flex; flex-direction: column; gap: 2px; }
+.side .brand { display: flex; align-items: center; gap: var(--space-4); font: var(--type-heading); margin: 0 var(--space-3) var(--space-6); }
+.side .brand .mark { color: var(--ink-900); }
+.side a { display: block; padding: var(--space-4) var(--space-5); border-radius: var(--radius-sm); color: var(--muted); text-decoration: none; font: var(--type-ui); }
+.side a:hover { background: var(--paper-100); color: var(--ink); }
+.side a[aria-current="page"] { background: var(--paper-200); color: var(--ink); font-weight: var(--weight-semibold); }
+.content { max-width: 1240px; width: 100%; padding: 20px 20px 60px; min-width: 0; }
+@media (max-width: 760px) {
+  .layout { grid-template-columns: 1fr; }
+  .side { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; border-right: 0; border-bottom: var(--border-width) solid var(--line); padding: var(--space-4) var(--space-5); }
+  .side .brand { margin: 0 var(--space-5) 0 0; }
+}
+.today { display: grid; gap: 3px; min-width: 110px; }
+.sortbtn { all: unset; cursor: pointer; }
+.sortbtn:hover, .sortbtn:focus-visible { color: var(--ink); text-decoration: underline; }
+.acts { white-space: nowrap; }
+.acts button { height: 26px; }
+label.inline { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+.editrow td { background: var(--paper-100); }
+.pill.limited { margin-left: 2px; }
+td.detail { white-space: normal; min-width: 240px; max-width: 460px; word-break: break-word; }
