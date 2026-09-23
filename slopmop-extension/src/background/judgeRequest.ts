@@ -4,7 +4,7 @@ import { live } from "../shared/manifest";
 import type { JudgeResponse } from "../shared/types";
 import { engagementBand } from "../shared/engagement";
 import { installId } from "./installId";
-import { describeNetworkError, interpretFailure } from "./judgeFailure";
+import { describeNetworkError, interpretFailure, readJson } from "./judgeFailure";
 import type { Attempt, Job } from "./judgeTypes";
 import { learnPolicy, noteRequestStart, pauseFor, pausedForMs } from "./policy";
 import { learnManifestVersion } from "./manifest";
@@ -24,7 +24,7 @@ async function sendOnce(job: Job, id: string, attempt: number): Promise<Attempt>
       body: JSON.stringify({ network: NETWORK, postText: job.text, surfaceStats: job.stats, nativeId: job.nativeId, engagement: job.engagement }),
     });
     if (!res.ok) return await interpretFailure(res, backoffMs);
-    const response = (await res.json()) as JudgeResponse & { policy?: unknown };
+    const response = await readJson<JudgeResponse & { policy?: unknown }>(res);
     learnPolicy(response.policy);
     learnWeightsVersion(response.weightsVersion);
     learnManifestVersion(response.manifestVersion);

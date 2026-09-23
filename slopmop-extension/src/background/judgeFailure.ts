@@ -20,8 +20,27 @@ const retryAfterSeconds = (res: Response) => {
   return Number.isFinite(asked) && asked > 0 ? asked : 0;
 };
 
+/** A reply that should have been data but was something else (a web page): what answered is not our server. */
+export class NotJsonError extends Error {
+  constructor(readonly status: number) {
+    super(`${SERVER_URL} returned a web page instead of data (HTTP ${status}). A VPN, network filter or login page (captive portal) may be intercepting it. Open ${SERVER_URL}/api/v1/health to see what is answering.`);
+  }
+}
+
+/** Parses a reply as JSON; if it isn't JSON, says so plainly instead of surfacing "Unexpected token '<'". */
+export async function readJson<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new NotJsonError(res.status);
+  }
+}
+
+const looksLikeWebPage = (res: Response) => (res.headers.get("content-type") ?? "").includes("text/html");
+
 export const describeNetworkError = (e: unknown) =>
-  e instanceof DOMException && e.name === "TimeoutError" ? `timed out after ${live.values.requestTimeoutMs / SECOND_MS}s (${SERVER_URL})` : `network: ${e instanceof Error ? e.message : String(e)} (${SERVER_URL})`;
+  e instanceof NotJsonError ? e.message : e instanceof DOMException && e.name === "TimeoutError" ? `timed out after ${live.values.requestTimeoutMs / SECOND_MS}s (${SERVER_URL})` : `network: ${e instanceof Error ? e.message : String(e)} (${SERVER_URL})`;
 
 /** Works out what a failed response means: stop, wait for the rate limit, or back off and retry. */
 export async function interpretFailure(res: Response, backoffMs: number): Promise<Attempt> {
@@ -38,7 +57,7 @@ export async function interpretFailure(res: Response, backoffMs: number): Promis
   }
   learnPolicy(body.policy);
 
-  const error = `server ${res.status}${body.message ? `: ${body.message}` : ""}`;
+  const error = looksLikeWebPage(res) ? new NotJsonError(res.status).message : `server ${res.status}${body.message ? `: ${body.message}` : ""}`;
   const asked = retryAfterSeconds(res);
   // When the server says how long to wait (the scoring model is busy), wait at least that long.
   const pauseMs = asked ? Math.min(Math.max(backoffMs, asked * SECOND_MS), live.values.maxRetryPauseMs) : backoffMs;
