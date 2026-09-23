@@ -86,6 +86,28 @@ describe("the device id", () => {
     vi.unstubAllGlobals();
   });
 
+  it("a yes from the server clears a stale 'disabled' hold, and a stale daily-limit hold once the install is under its limit", async () => {
+    mem.blocked = { until: Date.now() + 3_000_000, message: "disabled" };
+    mem.dailyLimit = { until: Date.now() + 3_000_000, message: "limit" };
+    vi.stubGlobal("fetch", async () => json(200, { used: 300, limit: 2000, remaining: 1700, resetsAt: "2026-09-24T00:00:00.000Z", device: "a1b2c3d4" }));
+    await refreshUsage();
+    expect(mem.blocked).toBeUndefined();
+    expect(mem.dailyLimit).toBeUndefined();
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps a daily-limit hold while the install is still at its limit, and a 'disabled' hold while the server still says no", async () => {
+    mem.dailyLimit = { until: Date.now() + 3_000_000, message: "limit" };
+    vi.stubGlobal("fetch", async () => json(200, { used: 250, limit: 250, remaining: 0, resetsAt: "2026-09-24T00:00:00.000Z", device: "a1b2c3d4" }));
+    await refreshUsage();
+    expect(mem.dailyLimit).toBeDefined();
+    mem.blocked = { until: Date.now() + 3_000_000, message: "disabled" };
+    vi.stubGlobal("fetch", async () => json(403, { error: "client_disabled", message: "off" }));
+    await refreshUsage();
+    expect(mem.blocked).toBeDefined();
+    vi.unstubAllGlobals();
+  });
+
   it("changes nothing when something other than the server answers", async () => {
     vi.stubGlobal("fetch", async () => new Response("<!DOCTYPE html><html></html>", { status: 200, headers: { "content-type": "text/html" } }));
     await refreshUsage();

@@ -1,6 +1,7 @@
 import { DAY_MS, HOUR_MS } from "../constants.js";
 import type { Row, SqlArg } from "../db/types.js";
 import { num, parseJson } from "../repos/shared.js";
+import type { Limits } from "../limitsStore.js";
 import type { Store } from "../store.js";
 
 export { num, parseJson };
@@ -29,6 +30,8 @@ export interface Scope {
   /** Length of the whole range in ms. */
   span: number;
   net: string | null;
+  /** The default limits in force now (an install may have its own, which the queries read from the installs table). */
+  limits: Limits;
   cost: (inputTokens: number, outputTokens: number) => number;
   q: (sql: string, args?: SqlArg[]) => Promise<Row[]>;
   /** `AND <col> = ?` when a network is selected, else empty. `col` lets a query alias the table. */
@@ -36,7 +39,7 @@ export interface Scope {
   netArgs: () => SqlArg[];
 }
 
-export function makeScope(store: Store, opts: { range: RangeKey; network?: string | null }): Scope {
+export function makeScope(store: Store, opts: { range: RangeKey; network?: string | null; limits?: Limits }): Scope {
   const { config } = store;
   const now = store.now();
   const span = RANGES[opts.range];
@@ -44,6 +47,7 @@ export function makeScope(store: Store, opts: { range: RangeKey; network?: strin
   const net = opts.network || null;
   return {
     store,
+    limits: opts.limits ?? { dailyLimit: config.dailyLimit, ipHourlyLimit: config.ipHourlyLimit },
     now,
     span,
     size,

@@ -38,7 +38,7 @@ describe.each(ADAPTERS)("schema and adapter (%s)", (kind) => {
     const db = await makeDb(kind);
     await migrate(db);
     await migrate(db);
-    expect((await db.execute("SELECT value FROM _meta WHERE key = 'schema_version'")).rows[0].value).toBe("10");
+    expect((await db.execute("SELECT value FROM _meta WHERE key = 'schema_version'")).rows[0].value).toBe("11");
   });
   it("batches are atomic: a failing statement rolls the whole batch back", async () => {
     const db = await makeDb(kind);

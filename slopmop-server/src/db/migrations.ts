@@ -140,4 +140,8 @@ export const MIGRATIONS: string[][] = [
     `ALTER TABLE installs ADD COLUMN daily_limit INTEGER`,
     `ALTER TABLE installs ADD COLUMN hourly_limit INTEGER`,
   ],
+  [
+    // A name the admin gives an install so a device being troubleshot is easy to spot. Only ever shown to the admin.
+    `ALTER TABLE installs ADD COLUMN alias TEXT`,
+  ],
 ];

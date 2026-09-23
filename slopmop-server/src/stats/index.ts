@@ -15,7 +15,7 @@ export type { Bucket } from "./activity.js";
  * log (events). All times are UTC epoch milliseconds. No post text and no raw install ids ever appear here: devices are
  * shown by a short prefix of their salted hash. Each section lives in its own module; this only puts them together.
  */
-export async function computeStats(store: Store, opts: { range: RangeKey; network?: string | null }) {
+export async function computeStats(store: Store, opts: { range: RangeKey; network?: string | null; limits?: import("../limitsStore.js").Limits }) {
   const s = makeScope(store, opts);
   const { config } = store;
 
@@ -43,7 +43,7 @@ export async function computeStats(store: Store, opts: { range: RangeKey; networ
     bucketMs: s.size,
     network: s.net,
     pricing: { inputUsdPerM: config.inputUsdPerM, outputUsdPerM: config.outputUsdPerM },
-    limits: { dailyLimit: config.dailyLimit, storesText: config.storeText, eventRetentionDays: config.eventRetentionDays },
+    limits: { dailyLimit: s.limits.dailyLimit, ipHourlyLimit: s.limits.ipHourlyLimit, storesText: config.storeText, eventRetentionDays: config.eventRetentionDays },
     summary: await summarize(s, totals, latencies),
     installs,
     community,

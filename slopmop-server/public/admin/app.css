@@ -149,3 +149,19 @@ td.detail { white-space: normal; min-width: 240px; max-width: 460px; word-break:
 .cell-bar { display: grid; grid-template-columns: 90px auto; gap: 8px; align-items: center; }
 .card + .card { margin-top: 12px; }
 td.detail { white-space: normal; }
+
+/* Folding sections */
+.fold { margin: 14px 0 10px; }
+.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 10px; padding: 6px 2px; user-select: none; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::before { content: "▸"; color: var(--text-faint); transition: transform var(--dur-fast) var(--ease-standard); flex: none; width: 12px; }
+.fold[open] > summary::before { transform: rotate(90deg); }
+.fold > summary h2 { margin: 0; }
+.fold > summary:hover h2 { text-decoration: underline; text-decoration-color: var(--border-default); }
+.fold > summary:focus-visible { outline: none; box-shadow: var(--shadow-focus); border-radius: var(--radius-sm); }
+.fold-body { margin-top: 8px; }
+.fold-body > .grid { margin-bottom: 12px; }
+.fold-body > .card + .card, .fold-body > .grid + .card { margin-top: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.chip { height: auto; padding: 3px 10px; display: inline-flex; gap: 4px; align-items: center; font: var(--type-label); box-shadow: none; }
+.chip[aria-pressed="true"] { background: var(--paper-200); border-color: var(--ink-400); }

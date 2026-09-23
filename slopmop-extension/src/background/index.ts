@@ -5,7 +5,7 @@ import type { JudgeResponse } from "../shared/types";
 import { refreshBadge } from "./badge";
 import { enqueue, prioritize } from "./queue";
 import { blockedHold, cooldownHold, dailyLimitHold } from "./serverState";
-import { refreshUsage } from "./usage";
+import { probeSoon, refreshUsage } from "./usage";
 import { loadStats, recordStat, statsReply } from "./stats";
 import { allTabs, blank, getTab, updateTab } from "./tabs";
 import { watchManifest } from "../shared/manifest";
@@ -28,6 +28,7 @@ async function judge(m: Extract<Msg, { type: "judge" }>, tabId: number | undefin
   // Don't ask the server while it has said no: the daily counter hasn't reset, or the admin disabled this install.
   const held = (await blockedHold()) ?? (await dailyLimitHold()) ?? (await cooldownHold());
   if (held) {
+    probeSoon(); // the admin may have re-enabled this install or raised its limit: find out without waiting out the hold
     void updateTab(tabId, (t) => ({ ...t, errors: t.errors + 1, lastError: held.message }));
     return null;
   }

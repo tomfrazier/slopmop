@@ -14,7 +14,7 @@ export async function statsRoute(request: Request, ctx: Ctx): Promise<Response> 
   if (!(range in RANGES)) throw new HttpError(400, "invalid_input", `range must be one of ${Object.keys(RANGES).join(", ")}.`);
   const network = q.get("network");
   if (network && !getNetwork(network)) requireNetwork(network); // throws the standard unsupported-network error
-  return json(200, await computeStats(ctx.store, { range, network }));
+  return json(200, await computeStats(ctx.store, { range, network, limits: await ctx.limits.current() }));
 }
 
 /** NDJSON of what Jev said and what people said, for tuning thresholds offline. Disabled unless ADMIN_TOKEN is set. */

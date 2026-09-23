@@ -51,12 +51,12 @@ const postRow = (r: Row) => ({
 });
 
 /** Posts that have votes, filtered and ordered by the given SQL (n/m/p are the no/maybe/probably counts). */
-async function votedPosts(s: Scope, having: string, order: string, limit: number) {
+async function votedPosts(s: Scope, having: string, order: string, limit: number, offset = 0) {
   const rows = await s.q(
     `SELECT c.network, c.content_id, c.native_id, c.ai_likelihood, c.engagement, c.checks, c.last_seen,
             SUM(v.vote='no') n, SUM(v.vote='maybe') m, SUM(v.vote='probably') p
      FROM votes v JOIN content c ON c.network = v.network AND c.content_id = v.content_id
-     WHERE 1=1${s.netSql("c.network")} GROUP BY c.network, c.content_id HAVING ${having} ORDER BY ${order} LIMIT ${limit}`,
+     WHERE 1=1${s.netSql("c.network")} GROUP BY c.network, c.content_id HAVING ${having} ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}`,
     s.netArgs(),
   );
   return rows.map(postRow);
@@ -70,4 +70,25 @@ export async function votedPostLists(s: Scope) {
     votedPosts(s, `n > p AND c.ai_likelihood >= ${AI_LIKELY}`, "(n - p) DESC, c.ai_likelihood DESC", DISAGREEMENT_LIMIT),
   ]);
   return { mostFlagged, jevMissed, jevOverreached };
+}
+
+/** The lists the admin pages through. Each is `having` (which posts) and `order` (how they rank). */
+export const POST_LISTS = {
+  flagged: { having: "p > 0", order: "p DESC, (n + m + p) DESC, c.last_seen DESC" },
+  missed: { having: `p > n AND c.ai_likelihood < ${AI_LIKELY}`, order: "(p - n) DESC, c.ai_likelihood ASC" },
+  overreached: { having: `n > p AND c.ai_likelihood >= ${AI_LIKELY}`, order: "(n - p) DESC, c.ai_likelihood DESC" },
+} as const;
+export type PostList = keyof typeof POST_LISTS;
+
+/** One page of one of those lists, and how many posts it has in all. */
+export async function votedPostPage(s: Scope, list: PostList, limit: number, offset: number) {
+  const { having, order } = POST_LISTS[list];
+  const [count] = await s.q(
+    `SELECT COUNT(*) n FROM (
+       SELECT SUM(v.vote='no') n, SUM(v.vote='maybe') m, SUM(v.vote='probably') p, c.ai_likelihood
+       FROM votes v JOIN content c ON c.network = v.network AND c.content_id = v.content_id
+       WHERE 1=1${s.netSql("c.network")} GROUP BY c.network, c.content_id HAVING ${having})`,
+    s.netArgs(),
+  );
+  return { total: num(count?.n), rows: await votedPosts(s, having, order, limit, offset) };
 }
