@@ -5,8 +5,8 @@ import { deviceCode, table } from "../widgets.js";
 
 const PERCENT = 100;
 
-/** Peak share of the daily cap a device would use if it spread its checks evenly over the days it was active. */
-const capUse = (r, dailyLimit) => Math.min(PERCENT, Math.round((r.checks / Math.max(1, r.activeDays) / dailyLimit) * PERCENT));
+/** Peak share of the device's own daily cap (or the default, if it has none) it would use if it spread its checks evenly over the days it was active. */
+const capUse = (r) => Math.min(PERCENT, Math.round((r.checks / Math.max(1, r.activeDays) / r.dailyLimit) * PERCENT));
 
 export const deviceTable = (d) =>
   table(
@@ -19,7 +19,7 @@ export const deviceTable = (d) =>
       {
         h: "vs cap/day",
         r: 1,
-        v: (r) => el("div", { class: "bar", title: `Peak share of the ${d.limits.dailyLimit}/day cap if used evenly over active days` }, el("span", { style: `width:${capUse(r, d.limits.dailyLimit)}%;background:${r.limitHits ? "var(--amber)" : "var(--blue)"}` })),
+        v: (r) => el("div", { class: "bar", title: `Share of this device's ${r.dailyLimit.toLocaleString("en-US")}/day cap${r.ownLimit ? " (its own)" : " (the default)"} if used evenly over its active days` }, el("span", { style: `width:${capUse(r)}%;background:${r.limitHits ? "var(--amber)" : "var(--blue)"}` })),
       },
       { h: "Limit hits", r: 1, v: (r) => (r.limitHits ? el("span", { class: "warn" }, fmt.n(r.limitHits)) : "0") },
       { h: "Errors", r: 1, v: (r) => fmt.n(r.errors) },

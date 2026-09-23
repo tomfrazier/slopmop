@@ -2,7 +2,7 @@
 const API = "/api/v1/admin";
 const TOKEN_KEY = "slopmop-admin-token";
 const PREFS_KEY = "slopmop-admin-prefs";
-const DEFAULT_PREFS = { range: "7d", network: "", refresh: true, tz: "America/Los_Angeles" };
+const DEFAULT_PREFS = { range: "7d", network: "", refresh: true, tz: "America/Los_Angeles", open: {} };
 
 export const prefs = (() => {
   try {

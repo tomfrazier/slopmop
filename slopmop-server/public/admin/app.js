@@ -6,19 +6,19 @@ import { W, loadWeights } from "./weightsState.js";
 import { simulatorCard } from "./simulator.js";
 import { loadTuner, tunerCard } from "./tunerEditor.js";
 import { manifestCard, loadManifest, M } from "./manifestEditor.js";
-import { limitsCard, loadLimits } from "./limitsEditor.js";
+import { limitsBody, loadLimits } from "./limitsEditor.js";
 import { currentPage, sidebar } from "./nav.js";
 import { scoringCard, loadScoring, S } from "./scoringEditor.js";
 import { weightsCard } from "./weightsEditor.js";
-import { section, panel } from "./widgets.js";
-import { activityCharts } from "./views/activity.js";
-import { communitySections } from "./views/community.js";
+import { fold, panel } from "./widgets.js";
+import { communityFold } from "./views/community.js";
 import { devicesPage } from "./views/devicesPage.js";
+import { errorsPage } from "./views/errorsPage.js";
 import { reviewPage } from "./views/reviewPage.js";
 import { header } from "./views/header.js";
-import { jevSections } from "./views/jev.js";
+import { jevFolds } from "./views/jev.js";
 import { kpiRow } from "./views/kpis.js";
-import { overviewTail } from "./views/operations.js";
+import { overviewFolds } from "./views/operations.js";
 
 const app = document.getElementById("app");
 const AUTO_REFRESH_MS = 60_000;
@@ -63,11 +63,12 @@ async function load(refetch = true) {
   if (refetch || !lastStats) [lastStats] = await Promise.all([api("/stats", { range: prefs.range, network: prefs.network }), loadWeights(), loadScoring(), loadManifest(), loadTuner(), loadLimits()]);
   render(lastStats);
   clearInterval(timer);
-  if (prefs.refresh) timer = setInterval(() => (currentPage() === "devices" ? void hooks.reloadDevices() : currentPage() === "review" ? undefined : !W.dirty && !S.dirty && !M.dirty && void refresh()), AUTO_REFRESH_MS); // not while a weight edit is in progress; the device list reloads in place so a search isn't lost
+  if (prefs.refresh) timer = setInterval(() => (currentPage() === "devices" ? void hooks.reloadDevices() : currentPage() === "errors" ? void hooks.reloadErrors() : currentPage() === "review" ? undefined : !W.dirty && !S.dirty && !M.dirty && void refresh()), AUTO_REFRESH_MS); // not while a weight edit is in progress; the device list reloads in place so a search isn't lost
 }
 
 async function refresh(refetch = true) {
   if (currentPage() === "devices") return hooks.reloadDevices(); // the device list fetches its own data and redraws itself
+  if (currentPage() === "errors") return hooks.reloadErrors();
   try {
     await load(refetch);
   } catch (e) {
@@ -77,25 +78,21 @@ async function refresh(refetch = true) {
 
 /** What each section shows. Each is built from modules under views/ (or a card of its own). */
 const PAGES = {
-  overview: (d) => [kpiRow(d), ...activityCharts(d), ...overviewTail(d)],
+  overview: (d) => [kpiRow(d), ...overviewFolds(d)],
   devices: () => [devicesPage()],
+  errors: () => [errorsPage()],
   review: () => [reviewPage()],
   scoring: () => [
-    section("How a score is made", "The formula with today's numbers, and a simulator that runs the real code. Nothing here is saved."),
-    panel(simulatorCard()),
-    section("Tell weights", "How much each tell counts toward the slop score. Edits are live."),
-    panel(weightsCard()),
-    section("Scoring", "The likely-slop threshold for each sensitivity, and how reader response is measured. Edits are live."),
-    panel(scoringCard()),
-    section("Threshold tuner", "What each cut would catch on labelled posts. It only suggests; you decide."),
-    panel(tunerCard()),
+    fold("score", "How a score is made", "The formula with today's numbers, and a simulator that runs the real code. Nothing here is saved.", panel(simulatorCard())),
+    fold("weights", "Tell weights", "How much each tell counts toward the slop score. Edits are live.", panel(weightsCard())),
+    fold("scoring", "Scoring", "The likely-slop threshold for each sensitivity, and how reader response is measured. Edits are live.", panel(scoringCard())),
+    fold("tuner", "Threshold tuner", "What each cut would catch on labelled posts. It only suggests; you decide.", panel(tunerCard())),
   ],
   defaults: () => [
-    limitsCard(),
-    section("Client settings", "Every fixed value the extension runs on. Edits reach extensions within a day, sooner as they hear a new version."),
-    panel(manifestCard()),
+    fold("limits", "Default limits", "What every install follows unless it has its own limit", panel(limitsBody())),
+    fold("client", "Client settings", "Every fixed value the extension runs on. Edits reach extensions within a day, sooner as they hear a new version.", panel(manifestCard())),
   ],
-  posts: (d) => [...jevSections(d), ...communitySections(d)],
+  posts: (d) => [...jevFolds(d), communityFold(d)],
 };
 
 /** The page for the current section: the side navigation, then the section's own header and content. */

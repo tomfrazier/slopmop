@@ -4,6 +4,7 @@ import { el, mopMark } from "./dom.js";
 export const PAGES = [
   { id: "overview", label: "Overview", note: "Activity, cost and errors" },
   { id: "devices", label: "Devices", note: "Every install: find one, set its limits, switch it off" },
+  { id: "errors", label: "Errors", note: "Every error and refused request, with filters" },
   { id: "review", label: "Post review", note: "Paste a post: why it scored as it did, and what would change it" },
   { id: "scoring", label: "Scoring", note: "How a score is made: simulator, weights, thresholds, tuner" },
   { id: "defaults", label: "Defaults", note: "Default limits and what the extension runs on" },

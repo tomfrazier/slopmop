@@ -1,7 +1,7 @@
 import { barChart } from "../charts.js";
 import { el } from "../dom.js";
 import { fmt } from "../format.js";
-import { card, panel, section, table } from "../widgets.js";
+import { card, fold, panel, table } from "../widgets.js";
 
 const PERCENT = 100;
 const HUMAN_SIDE_TELLS = new Set(["humanVoice", "usefulness"]); // counter-signals, drawn in green rather than blue
@@ -47,11 +47,9 @@ const tellBars = (d) => {
 };
 
 /** The networks table, then what Jev is seeing (AI-likelihood distribution and average tell strength). */
-export function jevSections(d) {
+export function jevFolds(d) {
   return [
-    section("Networks"),
-    panel(networkTable(d)),
-    section("What Jev is seeing"),
-    el("div", { class: "grid two" }, card("AI-likelihood distribution", histogram(d), "Unique posts in range, by Jev's probability the text is LLM-drafted"), card("Average tell strength", tellBars(d), "Which patterns show up most across scored posts")),
+    fold("networks", "Networks", null, panel(networkTable(d))),
+    fold("jev", "What Jev is seeing", null, el("div", { class: "grid two" }, card("AI-likelihood distribution", histogram(d), "Unique posts in range, by Jev's probability the text is LLM-drafted"), card("Average tell strength", tellBars(d), "Which patterns show up most across scored posts"))),
   ];
 }

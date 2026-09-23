@@ -10,10 +10,10 @@ const tick = (ms = 30) => new Promise((r) => setTimeout(r, ms));
 const $ = (sel: string) => document.querySelector(sel) as HTMLElement | null;
 const $$ = (sel: string) => [...document.querySelectorAll(sel)] as HTMLElement[];
 const button = (text: string) => $$("button").find((b) => b.textContent === text)!;
-const headings = () => $$(".section h2").map((h) => h.textContent);
+const headings = () => $$(".fold > summary h2").map((h) => h.textContent);
 
 let h: Awaited<ReturnType<typeof makeHarness>>;
-const ROUTES: Record<string, Route> = { stats: "stats", weights: "weights", scoring: "scoring", manifest: "adminManifest", tuner: "tuner", simulate: "simulate", clients: "clients", export: "export", devices: "devices", limits: "limits", review: "review" };
+const ROUTES: Record<string, Route> = { stats: "stats", weights: "weights", scoring: "scoring", manifest: "adminManifest", tuner: "tuner", simulate: "simulate", clients: "clients", export: "export", devices: "devices", limits: "limits", review: "review", events: "events", posts: "posts" };
 
 /** The dashboard's fetches go to the real handlers, so this exercises the true request and response shapes. */
 function serveAdminApi() {
@@ -65,12 +65,13 @@ describe("admin dashboard", () => {
 
   it("signs in and draws every section from the server's real data", async () => {
     await openDashboard(KEY);
-    expect($$(".side a").map((a) => a.textContent)).toEqual(["Overview", "Devices", "Post review", "Scoring", "Defaults", "Posts and votes"]);
+    expect($$(".side a").map((a) => a.textContent)).toEqual(["Overview", "Devices", "Errors", "Post review", "Scoring", "Defaults", "Posts and votes"]);
     expect($(".side a[aria-current=page]")!.textContent).toBe("Overview");
-    expect(headings()).toEqual(["Busiest devices", "Errors and limit hits"]);
+    expect(headings()).toEqual(["Activity", "Busiest devices", "Errors and limit hits"]);
     expect($$(".kpi")).toHaveLength(12);
     expect($$(".kpi .l").map((e) => e.textContent)).toContain("Checks");
     expect($$("svg.chart").length).toBeGreaterThanOrEqual(4);
+    expect($$("details.fold").every((d) => (d as HTMLDetailsElement).open)).toBe(true); // the overview starts fully open
     const on = async (page: string) => {
       $(`.side a[href="#/${page}"]`)!.click();
       location.hash = `#/${page}`;
@@ -79,10 +80,11 @@ describe("admin dashboard", () => {
     };
     await on("scoring");
     expect(headings()).toEqual(["How a score is made", "Tell weights", "Scoring", "Threshold tuner"]);
+    const openness = $$("details.fold").map((d) => (d as HTMLDetailsElement).open);
+    expect(openness).toEqual([false, true, true, false]); // the long ones start folded away
     expect($$(".wrow")).toHaveLength(11); // one slider per tell, plus the two counter-tells
     await on("defaults");
-    expect(headings()).toEqual(["Client settings"]);
-    expect($$(".card h2").map((e) => e.textContent)).toContain("Default limits");
+    expect(headings()).toEqual(["Default limits", "Client settings"]);
     await on("posts");
     expect(headings()).toEqual(["Networks", "What Jev is seeing", "Community"]);
     await on("devices");
@@ -140,13 +142,15 @@ describe("admin dashboard", () => {
     await tick(600);
     expect($$("tbody code").map((c) => c.textContent)).toContain(ids[1]);
     expect($$("tbody code").length).toBeLessThan(3);
-    $$("button").find((b) => b.textContent === "Limits")!.click();
+    $$("button").find((b) => b.textContent === "Edit")!.click();
     await tick(50);
-    const [daily] = $$("tr.editrow input") as HTMLInputElement[];
+    const [name, daily] = $$("tr.editrow input") as HTMLInputElement[];
+    name.value = "Test laptop";
     daily.value = "777";
     $$("tr.editrow button").find((b) => b.textContent === "Save")!.click();
     await tick(300);
     expect($$(".pill").map((p) => p.textContent)).toContain("own limits");
+    expect($$("tbody td b").map((b) => b.textContent)).toContain("Test laptop"); // the name shows in the row
     const found = await h.ctx.store.clients.list({ q: "", status: "custom", sort: "lastSeen", dir: "desc", limit: 10, offset: 0 });
     expect(found.devices).toHaveLength(1);
     expect(found.devices[0].dailyLimit).toBe(777);
@@ -291,6 +295,37 @@ describe("admin dashboard", () => {
     button("Look up").click();
     await tick(300);
     expect(document.body.textContent).toMatch(/No stored post matches this text/);
+  });
+
+  it("remembers which sections you folded, across a redraw", async () => {
+    await openDashboard(KEY, "scoring");
+    const weights = () => $$("details.fold")[1] as HTMLDetailsElement;
+    expect(weights().open).toBe(true);
+    weights().open = false;
+    weights().dispatchEvent(new Event("toggle"));
+    button("Refresh").click();
+    await tick(200);
+    expect(weights().open).toBe(false);
+    expect(($$("details.fold")[0] as HTMLDetailsElement).open).toBe(false); // the untouched default is still folded
+  });
+
+  it("lists every error on its own page, filters it by what happened, and pages the voted-post lists", async () => {
+    h.failNext.error = new TypeError("seeded failure");
+    await h.call("judge", judgeBody({ postText: "A post that fails on the way to Jev, long enough to be judged normally here." }), { install: "install-dash-0xxxx" });
+    await openDashboard(KEY, "errors");
+    await tick(300);
+    expect($$("tbody tr").map((r) => r.textContent).join(" ")).toMatch(/TypeError/);
+    expect($$(".chip").length).toBeGreaterThan(0);
+    const select = $("select[aria-label=Show]") as HTMLSelectElement;
+    select.value = "limited";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await tick(300);
+    expect(document.body.textContent).toMatch(/Nothing matches/);
+    await openDashboard(KEY, "posts");
+    await tick(400);
+    expect(headings()).toEqual(["Networks", "What Jev is seeing", "Community"]);
+    expect($$(".card h2").map((e) => e.textContent)).toEqual(expect.arrayContaining(["Most flagged posts", "Voters said slop, Jev didn't"]));
+    expect(document.body.textContent).toMatch(/in all|Nobody has flagged/);
   });
 
   it("switches the range and redraws", async () => {

@@ -4,7 +4,7 @@ import { fmt, rangeLabel, TIMEZONES, tzName } from "../format.js";
 import { hooks } from "../hooks.js";
 import { pageInfo } from "../nav.js";
 
-const USES_RANGE = new Set(["overview", "posts"]); // the other sections aren't about a time range
+const USES_RANGE = new Set(["overview", "errors", "posts"]); // the other sections aren't about a time range
 
 const RANGE_CHOICES = [["24h", "24h"], ["7d", "7d"], ["30d", "30d"], ["90d", "90d"]];
 

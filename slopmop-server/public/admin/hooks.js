@@ -5,6 +5,8 @@ export const hooks = {
   refresh: async (_refetch = true) => {},
   /** Re-fetch the device list (the once-a-minute refresh does this on the Devices page instead of redrawing it). */
   reloadDevices: async () => {},
+  /** Re-fetch the error list. */
+  reloadErrors: async () => {},
   /** Show the sign-in form, optionally with a message. */
   login: (_message) => {},
 };
