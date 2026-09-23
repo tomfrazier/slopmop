@@ -13,6 +13,7 @@ import { buildQuestions, CRITERIA_VERSION, SCORE_TRAITS } from "../src/questions
 import { Store } from "../src/store.js";
 import { DatacenterList } from "../src/datacenterRanges.js";
 import { ManifestStore } from "../src/manifest.js";
+import { LimitsStore } from "../src/limitsStore.js";
 import { ScoringStore } from "../src/scoringStore.js";
 import { WeightStore } from "../src/weightStore.js";
 
@@ -69,8 +70,8 @@ export async function makeHarness(kind: Adapter, env: Env = {}): Promise<Harness
   // Tests must never reach the real network: this always "fails" the AWS/GCP fetch, so isDatacenter falls back to only
   // config.datacenterExtraCidrs (settable via the DATACENTER_CIDR_EXTRA env, like any other config value here).
   const neverFetch = (async () => { throw new Error("no network in tests"); }) as unknown as typeof fetch;
-  const ctx: Ctx = { config, store: new Store(db, config, () => clock.t), weights: new WeightStore(db, { weights: config.tellWeights, custom: config.customWeights }, () => clock.t), scoring: new ScoringStore(db, () => clock.t), manifest: new ManifestStore(db, () => clock.t), datacenter: new DatacenterList(config.datacenterExtraCidrs, () => clock.t, 24 * 60 * 60 * 1000, neverFetch), jev, criteriaVersion: CRITERIA_VERSION, version: "test" };
-  const METHOD: Record<Route, string> = { judge: "POST", vote: "POST", usage: "GET", health: "GET", export: "GET", stats: "GET", clients: "GET", weights: "GET", scoring: "GET", manifest: "GET", adminManifest: "GET", tuner: "GET", simulate: "POST" };
+  const ctx: Ctx = { config, store: new Store(db, config, () => clock.t), weights: new WeightStore(db, { weights: config.tellWeights, custom: config.customWeights }, () => clock.t), scoring: new ScoringStore(db, () => clock.t), limits: new LimitsStore(db, { dailyLimit: config.dailyLimit, ipHourlyLimit: config.ipHourlyLimit }, () => clock.t), manifest: new ManifestStore(db, () => clock.t), datacenter: new DatacenterList(config.datacenterExtraCidrs, () => clock.t, 24 * 60 * 60 * 1000, neverFetch), jev, criteriaVersion: CRITERIA_VERSION, version: "test" };
+  const METHOD: Record<Route, string> = { judge: "POST", vote: "POST", usage: "GET", health: "GET", export: "GET", stats: "GET", clients: "GET", weights: "GET", scoring: "GET", manifest: "GET", adminManifest: "GET", tuner: "GET", simulate: "POST", limits: "GET", devices: "GET" };
   return {
     ctx,
     db,

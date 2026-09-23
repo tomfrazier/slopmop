@@ -134,4 +134,10 @@ export const MIGRATIONS: string[][] = [
     // A second, independent ceiling on /judge, per source IP per UTC hour (see IpCapRepo). ip_hash is a salted hash, like install_hash.
     `CREATE TABLE IF NOT EXISTS ip_usage (ip_hash TEXT NOT NULL, hour TEXT NOT NULL, checks INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (ip_hash, hour))`,
   ],
+  [
+    // Per-install limit overrides. NULL = follow the default limits (the `limits` setting), so a new install gets the defaults
+    // and the admin can give one install its own daily and/or hourly ceiling.
+    `ALTER TABLE installs ADD COLUMN daily_limit INTEGER`,
+    `ALTER TABLE installs ADD COLUMN hourly_limit INTEGER`,
+  ],
 ];

@@ -26,7 +26,7 @@ export async function voteRoute(request: Request, ctx: Ctx): Promise<Response> {
 export async function usageRoute(request: Request, ctx: Ctx): Promise<Response> {
   const installId = installIdOf(request);
   if (await ctx.store.clients.isDisabled(installId)) throw disabledError();
-  return json(200, { ...(await ctx.store.caps.usage(installId)), policy: policyOf(ctx), manifestVersion: (await manifestOf(ctx)).version });
+  return json(200, { ...(await ctx.store.caps.usage(installId, (await ctx.limits.current()).dailyLimit)), policy: policyOf(ctx), manifestVersion: (await manifestOf(ctx)).version });
 }
 
 /** GET /api/v1/health: setup status with no secrets (which storage and Jev route, and where the weights come from, never their values). */
@@ -43,7 +43,7 @@ export async function healthRoute(_request: Request, ctx: Ctx): Promise<Response
     storage,
     jev: ctx.jev ? { via: ctx.jev.via, model: ctx.jev.model } : null,
     networks: SUPPORTED_NETWORKS,
-    dailyLimit: ctx.config.dailyLimit,
+    dailyLimit: (await ctx.limits.current()).dailyLimit,
     storesText: ctx.config.storeText,
     weights: (await ctx.weights.current()).source,
   });
