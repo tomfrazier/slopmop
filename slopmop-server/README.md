@@ -283,6 +283,11 @@ Every install follows the **default limits**: checks per install per UTC day (`D
 
 `GET /api/v1/usage` and the `usage` block of every `/judge` answer include `device`, the same 8-character id the dashboard shows, so a user can quote it (the extension's popup shows it, faint, under the logo). Admin endpoints: `GET|POST /admin/limits` (defaults), `GET /admin/devices?q=&status=&sort=&dir=&limit=&offset=` (every install, searchable by any part of the device id) and `POST /admin/clients {device, dailyLimit?, hourlyLimit?, disabled?}`.
 
+## Post review (admin)
+Paste a post's text on the admin's **Post review** page (or give a post id) to see why it scored the way it did. The server keeps only a hash of each post's text, so the paste is hashed exactly as `/judge` does (case, spacing and hidden characters ignored; the whole post is needed) and matched to the stored record. The page then shows the record, walks through the arithmetic step by step with today's settings, lists every tell and counter-tell, and solves each setting (`src/review.ts`) for the value that would take the post out of "Likely slop" or to "Looks fine", with how many other stored posts that same change would also flip, so a global setting isn't changed for one post without knowing what else it moves. It also tries combinations that lean on reader response, and has a "Try it" preview through the real simulator. It is view-only: nothing is saved and no check is used (`POST /api/v1/admin/review`).
+
+Admin times show in Pacific (PDT/PST) by default, with a switch to UTC in the header. The server itself still counts days and hours in UTC, so daily bars are labelled by UTC day and the hour-of-day chart is relabelled to the chosen zone using today's offset.
+
 ## Protecting /judge from scripted use
 
 An install id is just a random value the extension makes up; nothing stops a script from generating a fresh one per

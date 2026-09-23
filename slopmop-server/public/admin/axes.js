@@ -1,4 +1,4 @@
-import { fmt } from "./format.js";
+import { fmt, tzName } from "./format.js";
 
 // ---- axes ----
 const DAY_MS = 86_400_000;
@@ -6,11 +6,12 @@ const DAY_MS = 86_400_000;
 /** How time-series buckets are labelled: hourly charts label hours (and the day at midnight), daily charts label days. */
 export function seriesAxis(d) {
   const hourly = d.bucketMs < DAY_MS;
-  const hourOf = (t) => new Date(t).getUTCHours();
+  // Hourly buckets are real instants, so they follow the chosen timezone. Daily buckets are UTC days (the server counts days from
+  // UTC midnight), so they keep their UTC date and say so.
   return {
     hourly,
-    x: (b) => (hourly ? (hourOf(b.t) === 0 ? fmt.day(b.t) : String(hourOf(b.t)).padStart(2, "0")) : fmt.day(b.t)),
-    tipTitle: (b) => (hourly ? fmt.hour(b.t) : new Date(b.t).toISOString().slice(0, 10)) + " UTC",
+    x: (b) => (hourly ? (fmt.hourOf(b.t) === 0 ? fmt.day(b.t) : String(fmt.hourOf(b.t)).padStart(2, "0")) : fmt.utcDay(b.t)),
+    tipTitle: (b) => (hourly ? `${fmt.hour(b.t)} ${tzName(b.t)}` : `${new Date(b.t).toISOString().slice(0, 10)} (UTC day)`),
   };
 }
 

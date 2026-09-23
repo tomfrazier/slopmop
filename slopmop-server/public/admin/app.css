@@ -137,3 +137,15 @@ label.inline { display: inline-flex; align-items: center; gap: 4px; color: var(-
 .editrow td { background: var(--paper-100); }
 .pill.limited { margin-left: 2px; }
 td.detail { white-space: normal; min-width: 240px; max-width: 460px; word-break: break-word; }
+
+/* Post review */
+.review-text { width: 100%; height: auto; padding: var(--space-4) var(--space-5); font: var(--type-mono); resize: vertical; }
+.review-head { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; }
+.bigscore { font: var(--weight-semibold) 44px/1 var(--font-display); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; }
+.bigscore span { font: var(--type-body-sm); color: var(--muted); }
+.review-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 20px; margin-top: 14px; }
+.review-notes { margin-top: 12px; padding: var(--space-4) var(--space-5); background: var(--flag-warn-wash); border-radius: var(--radius-sm); }
+.review-notes p { margin: 4px 0; }
+.cell-bar { display: grid; grid-template-columns: 90px auto; gap: 8px; align-items: center; }
+.card + .card { margin-top: 12px; }
+td.detail { white-space: normal; }

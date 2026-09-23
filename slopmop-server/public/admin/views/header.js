@@ -1,6 +1,6 @@
 import { prefs, savePrefs, setToken } from "../api.js";
 import { el } from "../dom.js";
-import { fmt, rangeLabel } from "../format.js";
+import { fmt, rangeLabel, TIMEZONES, tzName } from "../format.js";
 import { hooks } from "../hooks.js";
 import { pageInfo } from "../nav.js";
 
@@ -30,8 +30,9 @@ export function header(d, page = "overview") {
   return el(
     "div",
     { class: "top" },
-    el("div", { class: "title" }, el("div", null, el("h1", null, info.label), el("div", { class: "sub" }, `${info.note} · updated ${fmt.time(d.generatedAt)} · all times UTC${USES_RANGE.has(page) ? ` · ${rangeLabel(d.range)}` : ""}`))),
+    el("div", { class: "title" }, el("div", null, el("h1", null, info.label), el("div", { class: "sub" }, `${info.note} · updated ${fmt.time(d.generatedAt)} · times in ${tzName()}${USES_RANGE.has(page) ? ` · ${rangeLabel(d.range)}` : ""}`))),
     el("div", { class: "grow" }),
+    segmented(TIMEZONES, "tz"),
     USES_RANGE.has(page) ? segmented(RANGE_CHOICES, "range") : null,
     USES_RANGE.has(page) ? networkSelect(d) : null,
     el("label", null, el("input", { type: "checkbox", checked: prefs.refresh, onchange: (e) => { prefs.refresh = e.target.checked; savePrefs(); hooks.refresh(); } }), "Auto-refresh"),

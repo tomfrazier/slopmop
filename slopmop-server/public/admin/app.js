@@ -14,6 +14,7 @@ import { section, panel } from "./widgets.js";
 import { activityCharts } from "./views/activity.js";
 import { communitySections } from "./views/community.js";
 import { devicesPage } from "./views/devicesPage.js";
+import { reviewPage } from "./views/reviewPage.js";
 import { header } from "./views/header.js";
 import { jevSections } from "./views/jev.js";
 import { kpiRow } from "./views/kpis.js";
@@ -62,7 +63,7 @@ async function load(refetch = true) {
   if (refetch || !lastStats) [lastStats] = await Promise.all([api("/stats", { range: prefs.range, network: prefs.network }), loadWeights(), loadScoring(), loadManifest(), loadTuner(), loadLimits()]);
   render(lastStats);
   clearInterval(timer);
-  if (prefs.refresh) timer = setInterval(() => (currentPage() === "devices" ? void hooks.reloadDevices() : !W.dirty && !S.dirty && !M.dirty && void refresh()), AUTO_REFRESH_MS); // not while a weight edit is in progress; the device list reloads in place so a search isn't lost
+  if (prefs.refresh) timer = setInterval(() => (currentPage() === "devices" ? void hooks.reloadDevices() : currentPage() === "review" ? undefined : !W.dirty && !S.dirty && !M.dirty && void refresh()), AUTO_REFRESH_MS); // not while a weight edit is in progress; the device list reloads in place so a search isn't lost
 }
 
 async function refresh(refetch = true) {
@@ -78,6 +79,7 @@ async function refresh(refetch = true) {
 const PAGES = {
   overview: (d) => [kpiRow(d), ...activityCharts(d), ...overviewTail(d)],
   devices: () => [devicesPage()],
+  review: () => [reviewPage()],
   scoring: () => [
     section("How a score is made", "The formula with today's numbers, and a simulator that runs the real code. Nothing here is saved."),
     panel(simulatorCard()),

@@ -16,6 +16,7 @@ export const PATHS: Record<string, Route> = {
   "admin/clients": "clients",
   "admin/devices": "devices",
   "admin/limits": "limits",
+  "admin/review": "review",
   "admin/weights": "weights",
   "admin/scoring": "scoring",
   "admin/manifest": "adminManifest",

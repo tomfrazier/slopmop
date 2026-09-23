@@ -7,7 +7,7 @@ import type { ManifestStore } from "./manifest.js";
 import type { ScoringStore } from "./scoringStore.js";
 import type { WeightStore } from "./weightStore.js";
 
-export type Route = "judge" | "vote" | "usage" | "health" | "export" | "stats" | "clients" | "weights" | "scoring" | "manifest" | "adminManifest" | "tuner" | "simulate" | "limits" | "devices";
+export type Route = "judge" | "vote" | "usage" | "health" | "export" | "stats" | "clients" | "weights" | "scoring" | "manifest" | "adminManifest" | "tuner" | "simulate" | "limits" | "devices" | "review";
 
 /** Everything a request handler needs, built once per server instance. */
 export interface Ctx {

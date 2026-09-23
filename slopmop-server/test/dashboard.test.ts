@@ -13,7 +13,7 @@ const button = (text: string) => $$("button").find((b) => b.textContent === text
 const headings = () => $$(".section h2").map((h) => h.textContent);
 
 let h: Awaited<ReturnType<typeof makeHarness>>;
-const ROUTES: Record<string, Route> = { stats: "stats", weights: "weights", scoring: "scoring", manifest: "adminManifest", tuner: "tuner", simulate: "simulate", clients: "clients", export: "export", devices: "devices", limits: "limits" };
+const ROUTES: Record<string, Route> = { stats: "stats", weights: "weights", scoring: "scoring", manifest: "adminManifest", tuner: "tuner", simulate: "simulate", clients: "clients", export: "export", devices: "devices", limits: "limits", review: "review" };
 
 /** The dashboard's fetches go to the real handlers, so this exercises the true request and response shapes. */
 function serveAdminApi() {
@@ -65,7 +65,7 @@ describe("admin dashboard", () => {
 
   it("signs in and draws every section from the server's real data", async () => {
     await openDashboard(KEY);
-    expect($$(".side a").map((a) => a.textContent)).toEqual(["Overview", "Devices", "Scoring", "Defaults", "Posts and votes"]);
+    expect($$(".side a").map((a) => a.textContent)).toEqual(["Overview", "Devices", "Post review", "Scoring", "Defaults", "Posts and votes"]);
     expect($(".side a[aria-current=page]")!.textContent).toBe("Overview");
     expect(headings()).toEqual(["Busiest devices", "Errors and limit hits"]);
     expect($$(".kpi")).toHaveLength(12);
@@ -256,6 +256,41 @@ describe("admin dashboard", () => {
     await tick(300);
     expect(gain().value).toBe("3");
     expect((await h.call("scoring", undefined, { headers: { authorization: `Bearer ${KEY}` } })).body.effective.formula.gain).toBe(5); // loaded, not saved
+  });
+
+  it("shows times in Pacific by default, and switches to UTC", async () => {
+    await openDashboard(KEY);
+    expect($(".top .sub")!.textContent).toMatch(/times in P[SD]T/);
+    expect(button("Pacific").getAttribute("aria-pressed")).toBe("true");
+    button("UTC").click();
+    await tick(200);
+    expect($(".top .sub")!.textContent).toMatch(/times in UTC/);
+  });
+
+  it("reviews a post from its pasted text: finds the record, walks through the score, and previews a change", async () => {
+    await openDashboard(KEY, "review");
+    const text = "Seeded dashboard post 1: the quick brown fox jumps over the lazy dog, again and again and again.";
+    const box = $("textarea") as HTMLTextAreaElement;
+    box.value = text;
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    button("Look up").click();
+    await tick(400);
+    expect(headings().length).toBe(0); // sections use cards on this page
+    const titles = $$(".card h2").map((h) => h.textContent);
+    expect(titles).toEqual(["Find a post", "What it scored", "How it was scored", "What Jev found", "What would change it", "Leaning on reader response", "Try it"]);
+    expect($(".bigscore")!.textContent).toMatch(/\d+ \/ 100/);
+    expect(document.body.textContent).toMatch(/Tell average.*Slop.*Corroboration.*Shield.*AI dampener.*Score/s);
+    const slider = $('input[aria-label="Largest shield"]') as HTMLInputElement;
+    slider.value = "0.95";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    await tick(700);
+    expect($(".sim-result")!.textContent).toMatch(/\/ 100 \(was \d+\)/);
+    // a post nobody has checked is said to be missing, not invented
+    box.value = "A post that nobody has ever checked with the tool, long enough to be looked up here.";
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    button("Look up").click();
+    await tick(300);
+    expect(document.body.textContent).toMatch(/No stored post matches this text/);
   });
 
   it("switches the range and redraws", async () => {

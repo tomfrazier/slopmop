@@ -2,7 +2,7 @@
 import { api } from "./api.js";
 import { el } from "./dom.js";
 import { hooks } from "./hooks.js";
-import { fmt } from "./format.js";
+import { clock, fmt, tzName } from "./format.js";
 import { card } from "./widgets.js";
 
 export const L = { data: null };
@@ -34,7 +34,7 @@ export function limitsCard() {
     el(
       "div",
       null,
-      el("div", { class: "sub note-y" }, "Every install follows these unless it has its own limit (set on the Devices page). Changes apply within seconds, and only to installs without their own limit."),
+      el("div", { class: "sub note-y" }, `Every install follows these unless it has its own limit (set on the Devices page). Changes apply within seconds, and only to installs without their own limit. Daily counts reset at 00:00 UTC${tzName() === "UTC" ? "" : ` (${clock(Date.UTC(2026, 6, 1))} in summer, ${clock(Date.UTC(2026, 0, 1))} in winter)`}.`),
       el("div", { class: "tools" }, el("label", null, "Checks per install, per day ", daily), el("label", null, "Checks per IP address, per hour ", hourly)),
       el("div", { class: "tools editor-actions" },
         el("button", { class: "primary", onclick: () => {
