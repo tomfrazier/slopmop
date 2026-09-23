@@ -69,6 +69,21 @@ describe("a reaction count that only appears in an ancestor's aria-label (no lea
   });
 });
 
+// A post card that also holds a comment with its own reaction count: the post's count (in an aria-label) is 214, the comment's is a
+// leaf reading "2 reactions". The first match used to win, so a post with 214 reactions was stored as having 2.
+describe("counts in a card that also holds other counts with the same word", () => {
+  it("takes the post's own (largest) count, wherever the smaller ones come first", () => {
+    const el = card(`
+      <div class="comment"><span>2 reactions</span></div>
+      <div class="details"><a aria-label="214 Reactions"><span aria-hidden="true">214</span></a><span>93 Comments</span><span>15 reposts</span></div>`);
+    expect(extractPost(el)!.engagement).toEqual({ reactions: 214, comments: 93, reposts: 15 });
+  });
+  it("still reads a lone count, and 0 when there is none", () => {
+    expect(extractPost(card("<span>34 reactions</span>"))!.engagement.reactions).toBe(34);
+    expect(extractPost(card(""))!.engagement.reactions).toBe(0);
+  });
+});
+
 describe("helpers", () => {
   it("parses counts", () => {
     expect(parseCount("1.2K")).toBe(1200);
