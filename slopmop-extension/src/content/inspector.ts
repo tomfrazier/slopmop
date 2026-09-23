@@ -227,6 +227,17 @@ export function openVotePanel(anchor: HTMLElement, opts: PanelOpts): void {
     paint();
   };
 
+  /**
+   * Where the panel was last put. Voting "Probably" in Hide mode folds the post away, which hides the mop icon the panel is
+   * anchored to; its rect then reads 0x0 at the page's top-left, and placing the panel against that threw it to the left
+   * edge. While the anchor is collapsed the panel stays exactly where it was.
+   */
+  let lastPos: { left: string; top: string } | null = null;
+  const collapsed = () => {
+    const a = anchor.getBoundingClientRect();
+    return !anchor.isConnected || (a.width === 0 && a.height === 0);
+  };
+
   const paint = () => {
     if (!current) return;
     const s = opts.getState();
@@ -237,6 +248,8 @@ export function openVotePanel(anchor: HTMLElement, opts: PanelOpts): void {
       : buildScoringPanel(s);
     r.append(panel);
     place(panel);
+    if (lastPos && collapsed()) Object.assign(panel.style, lastPos);
+    else lastPos = { left: panel.style.left, top: panel.style.top };
     stopDismissal();
     stopDismissal = closeOnDismissal(panel, anchor, (e) => e.key === "Escape" && close(true), close);
   };

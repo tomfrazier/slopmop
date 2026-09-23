@@ -215,6 +215,18 @@ describe("vote panel", () => {
     voteBtn("No").click();
     await vi.waitFor(() => expect(panelOf()!.querySelector(".err")!.textContent).toBe("Couldn't score this post."));
   });
+  it("keeps the panel where it was when a vote hides the post (and so the icon it hangs from)", async () => {
+    const rect = (l: number, t: number, w: number, h: number) => ({ left: l, top: t, right: l + w, bottom: t + h, width: w, height: h, x: l, y: t, toJSON() {} }) as DOMRect;
+    let visible = true;
+    anchor.getBoundingClientRect = () => (visible ? rect(600, 120, 32, 32) : rect(0, 0, 0, 0));
+    openVotePanel(anchor, opts({}, { onPick: async () => ((visible = false), null) }));
+    const before = { left: panelOf()!.style.left, top: panelOf()!.style.top };
+    expect(before.left).not.toBe("");
+    voteBtn("Probably").click();
+    await vi.waitFor(() => expect(voteBtn("Probably")).toBeDefined());
+    await new Promise((r) => setTimeout(r, 20));
+    expect({ left: panelOf()!.style.left, top: panelOf()!.style.top }).toEqual(before); // not thrown to the left edge
+  });
   it("closes on Escape, on an outside press, and when the icon is pressed again", () => {
     openVotePanel(anchor, opts());
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
