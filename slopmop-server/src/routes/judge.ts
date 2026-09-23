@@ -2,7 +2,7 @@ import type { Ctx } from "../ctx.js";
 import { StorageNotConfigured } from "../db/types.js";
 import { HttpError, installIdOf, json, readJson } from "../http.js";
 import { serverTiming } from "../timing.js";
-import { upstreamError } from "../upstream.js";
+import { describeUpstream, upstreamError } from "../upstream.js";
 import { engagementTotal, nextInterval } from "../recheck.js";
 import { scoreParts } from "../scoring.js";
 import { modelVersion } from "../scoringStore.js";
@@ -80,7 +80,7 @@ export async function judgeRoute(request: Request, ctx: Ctx): Promise<Response> 
     );
   } catch (e) {
     await store.caps.refund(installId).catch(() => undefined); // a failure on our side shouldn't cost the user a check
-    await store.events.record({ network: input.network.id, installId, contentId: input.contentId, kind: "error", latencyMs: timing.elapsedMs(), detail: e instanceof Error ? e.name : "unknown" });
+    await store.events.record({ network: input.network.id, installId, contentId: input.contentId, kind: "error", latencyMs: timing.elapsedMs(), detail: describeUpstream(e) });
     throw e instanceof HttpError || e instanceof StorageNotConfigured ? e : upstreamError(e);
   }
 }

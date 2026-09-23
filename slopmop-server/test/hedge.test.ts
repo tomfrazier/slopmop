@@ -109,7 +109,7 @@ describe("judge() with a stalling Jev", () => {
         return Promise.resolve({ model: "jev-x", answers: answers(), usage: { input_tokens: 1, output_tokens: 1 } });
       },
     };
-    const tuning = { hedgeAfterMs: 1000, attemptTimeoutMs: 1000, maxAttempts: 3, rateLimitRetries: 2, minPauseMs: 1, maxPauseMs: 20 };
+    const tuning = { hedgeAfterMs: 1000, attemptTimeoutMs: 1000, maxAttempts: 3, rateLimitRetries: 2, minPauseMs: 1, maxPauseMs: 20, maxConcurrent: 6, queueWaitMs: 1000 };
     const v = await judge(client as never, "jev-x", input, tuning);
     expect(n).toBe(3);
     expect(v.attempts).toBe(1); // pausing is not hedging
@@ -118,7 +118,7 @@ describe("judge() with a stalling Jev", () => {
   it("gives up with the rate-limit error once the retries are used", async () => {
     let n = 0;
     const client = { systemOne: () => (n++, Promise.reject(new RateLimitError(429, { message: "no" }, new Headers()))) };
-    const tuning = { hedgeAfterMs: 1000, attemptTimeoutMs: 1000, maxAttempts: 3, rateLimitRetries: 2, minPauseMs: 1, maxPauseMs: 5 };
+    const tuning = { hedgeAfterMs: 1000, attemptTimeoutMs: 1000, maxAttempts: 3, rateLimitRetries: 2, minPauseMs: 1, maxPauseMs: 5, maxConcurrent: 6, queueWaitMs: 1000 };
     await expect(judge(client as never, "jev-x", input, tuning)).rejects.toBeInstanceOf(RateLimitError);
     expect(n).toBe(3);
   });

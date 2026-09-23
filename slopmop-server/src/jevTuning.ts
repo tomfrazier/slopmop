@@ -11,11 +11,14 @@ export interface Tuning {
   rateLimitRetries: number;
   minPauseMs: number;
   maxPauseMs: number;
+  /** How many Jev calls one server instance runs at once; the rest wait up to `queueWaitMs`. */
+  maxConcurrent: number;
+  queueWaitMs: number;
 }
 /** How long to wait when the upstream rate-limits us without saying for how long, and the random extra so retries spread out. */
 export const DEFAULT_RATE_LIMIT_PAUSE_MS = 1000;
 export const RATE_LIMIT_JITTER_MS = 250;
-export const DEFAULT_TUNING: Tuning = { hedgeAfterMs: 1500, attemptTimeoutMs: 5000, maxAttempts: 3, rateLimitRetries: 2, minPauseMs: 500, maxPauseMs: 2500 };
+export const DEFAULT_TUNING: Tuning = { hedgeAfterMs: 1500, attemptTimeoutMs: 5000, maxAttempts: 3, rateLimitRetries: 2, minPauseMs: 500, maxPauseMs: 2500, maxConcurrent: 6, queueWaitMs: 8000 };
 
 const ms = (v: string | undefined, fallback: number, min: number) => {
   const n = v === undefined || v === "" ? NaN : Number(v);
@@ -28,6 +31,8 @@ export const tuningFrom = (env: Env): Tuning => ({
   rateLimitRetries: ms(env.JEV_RATE_LIMIT_RETRIES, DEFAULT_TUNING.rateLimitRetries, 0),
   minPauseMs: DEFAULT_TUNING.minPauseMs,
   maxPauseMs: DEFAULT_TUNING.maxPauseMs,
+  maxConcurrent: ms(env.JEV_MAX_CONCURRENT, DEFAULT_TUNING.maxConcurrent, 1),
+  queueWaitMs: ms(env.JEV_QUEUE_WAIT_MS, DEFAULT_TUNING.queueWaitMs, 0),
 });
 
 /** A stall, a dropped connection or a 5xx is worth asking again; a rejected key, bad input or rate limit is not. */
