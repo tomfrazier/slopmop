@@ -141,3 +141,25 @@ describe.each(ADAPTERS)("the paged voted-post lists (%s)", (kind) => {
     expect((await h.call("posts", undefined, { ...get, query: "?list=nope" })).status).toBe(400);
   });
 });
+
+describe.each(ADAPTERS)("DAU and MAU (%s)", (kind) => {
+  it("counts installs that made a check per UTC day, over 30 days, with stickiness", async () => {
+    const h = await makeHarness(kind, { ADMIN_TOKEN: "s3cret" });
+    const admin = { headers: { authorization: "Bearer s3cret" }, query: "?range=30d" };
+    const post = (n: number) => judgeBody({ postText: `A distinct post number ${n} with enough words in it to be judged as usual, again and again.` });
+    let n = 0;
+    const day = async (who: string[]) => { for (const w of who) await h.call("judge", post(n++), { install: `install-${w}-xxxxxxxx` }); };
+    h.clock.t -= 40 * 86_400_000;
+    await day(["old1", "old2"]); // 40 days ago: outside the 30-day window
+    h.clock.t += 20 * 86_400_000;
+    await day(["a", "b"]);
+    h.clock.t += 19 * 86_400_000; // yesterday
+    await day(["a", "b", "c"]);
+    h.clock.t += 86_400_000; // today
+    await day(["a"]);
+    const { body } = await h.call("stats", undefined, admin);
+    expect(body.installs).toMatchObject({ dau: 1, dauYesterday: 3, mau: 3 });
+    expect(body.installs.avgDau30).toBeCloseTo(6 / 30, 1);
+    expect(body.installs.stickinessPct).toBeCloseTo(((6 / 30) / 3) * 100, 0);
+  });
+});

@@ -68,8 +68,8 @@ describe("admin dashboard", () => {
     expect($$(".side a").map((a) => a.textContent)).toEqual(["Overview", "Devices", "Errors", "Post review", "Scoring", "Defaults", "Posts and votes"]);
     expect($(".side a[aria-current=page]")!.textContent).toBe("Overview");
     expect(headings()).toEqual(["Activity", "Busiest devices", "Errors and limit hits"]);
-    expect($$(".kpi")).toHaveLength(12);
-    expect($$(".kpi .l").map((e) => e.textContent)).toContain("Checks");
+    expect($$(".kpi")).toHaveLength(14);
+    expect($$(".kpi .l").map((e) => e.textContent)).toEqual(expect.arrayContaining(["Checks", "DAU", "MAU"]));
     expect($$("svg.chart").length).toBeGreaterThanOrEqual(4);
     expect($$("details.fold").every((d) => (d as HTMLDetailsElement).open)).toBe(true); // the overview starts fully open
     const on = async (page: string) => {

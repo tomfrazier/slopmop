@@ -6,6 +6,8 @@ import { num, round, type Scope } from "./scope.js";
 /** A device counts as "near the cap" from this share of the daily limit. */
 export const NEAR_CAP_FRACTION = 0.8;
 export const DEVICE_TABLE_LIMIT = 25;
+/** MAU looks back this many UTC days, today included. */
+export const ACTIVE_WINDOW_DAYS = 30;
 
 /** How many installs exist and are active, and how many are at or near today's cap. */
 export async function installStats(s: Scope) {
@@ -23,7 +25,22 @@ export async function installStats(s: Scope) {
      FROM usage u LEFT JOIN installs i ON i.install_hash = u.install_hash WHERE u.day = ?`,
     [dailyLimit, dailyLimit, dayKey(now)],
   );
+  // DAU/MAU the usual way: an active user is an install that made at least one check (from the events log, which keeps 90 days;
+  // refused requests don't count). DAU is a UTC calendar day, MAU the distinct installs over the trailing 30 days including today, and
+  // stickiness is the 30-day average DAU over MAU.
+  const days = Array.from({ length: ACTIVE_WINDOW_DAYS }, (_, i) => dayKey(now - i * DAY_MS));
+  const windowStart = Date.parse(`${days[days.length - 1]}T00:00:00Z`);
+  const perDay = await s.q(`SELECT date(at / 1000, 'unixepoch') day, COUNT(DISTINCT install_hash) n FROM events WHERE kind IN ('scored','cached') AND at >= ? GROUP BY day`, [windowStart]);
+  const dauOn = (day: string) => num(perDay.find((r) => r.day === day)?.n);
+  const [mauRow] = await s.q(`SELECT COUNT(DISTINCT install_hash) n FROM events WHERE kind IN ('scored','cached') AND at >= ?`, [windowStart]);
+  const mau = num(mauRow?.n);
+  const avgDau = days.reduce((n, d) => n + dauOn(d), 0) / ACTIVE_WINDOW_DAYS;
   return {
+    dau: dauOn(days[0]),
+    dauYesterday: dauOn(days[1]),
+    mau,
+    avgDau30: round(avgDau, 1),
+    stickinessPct: mau ? round((avgDau / mau) * 100, 1) : null,
     total: num(inst?.total),
     active24h: num(inst?.a24),
     active7d: num(inst?.a7),
