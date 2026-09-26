@@ -24,6 +24,8 @@ export function kpiRow(d) {
     kpi("Checks", fmt.n(S.checks), `${fmt.n(S.jevCalls)} Jev calls · ${fmt.pct(S.cacheHitPct, 0)} from cache`),
     kpi("AI-likely posts", fmt.pct(aiLikelyShare(d.networks), 0), "Jev's AI-likelihood ≥ 50%"),
     kpi("Installs", fmt.n(I.total), `${fmt.n(I.active24h)} active 24h · ${fmt.n(I.active7d)} 7d · ${fmt.n(I.active30d)} 30d`),
+    kpi("DAU", fmt.n(I.dau), `today so far (UTC) · yesterday ${fmt.n(I.dauYesterday)} · 30-day avg ${I.avgDau30.toFixed(1)}`),
+    kpi("MAU", fmt.n(I.mau), `installs active in the last 30 days${I.stickinessPct == null ? "" : ` · stickiness ${fmt.pct(I.stickinessPct, 0)}`}`),
     kpi("New installs", fmt.n(I.newInRange), rangeLabel(d.range)),
     kpi("Jev cost", fmt.usd(S.costUsd), `${fmt.usd(S.costPerDayUsd)}/day · ~${fmt.usd(S.projectedMonthUsd)}/mo at the last-7-day pace`),
     kpi("Cost per 1,000 checks", S.costPerCheckUsd == null ? "-" : fmt.usd(S.costPerCheckUsd * 1000), `${fmt.compact(S.inputTokens)} input tokens`),
