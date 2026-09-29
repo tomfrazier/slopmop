@@ -8,6 +8,7 @@ import { describeNetworkError, interpretFailure, readJson } from "./judgeFailure
 import type { Attempt, Job } from "./judgeTypes";
 import { learnPolicy, noteRequestStart, pauseFor, pausedForMs } from "./policy";
 import { clearProblem, noteProblem } from "./problem";
+import { clearDatacenterStrikes } from "./serverState";
 import { learnManifestVersion } from "./manifest";
 import { updateTab } from "./tabs";
 import { learnWeightsVersion, writeCached } from "./verdictCache";
@@ -46,7 +47,7 @@ export async function requestVerdict(job: Job): Promise<JudgeResponse | null> {
   let rateWaits = 0;
   for (let attempt = 0; attempt < live.values.maxAttempts; attempt++) {
     const r = await sendOnce(job, id, attempt);
-    if (r.kind === "ok") return void (await clearProblem().catch(() => undefined)), r.response;
+    if (r.kind === "ok") return void (await clearProblem().catch(() => undefined)), void (await clearDatacenterStrikes().catch(() => undefined)), r.response;
     lastError = r.error;
     if (r.kind === "stop") break;
     if (r.kind === "rate" && rateWaits++ < live.values.maxRateLimitWaits) {
