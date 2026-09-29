@@ -2,6 +2,8 @@ import { readdirSync, readFileSync } from "node:fs";
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
 import { closeInspector, radarChart, showInspectorBeside, type InspectData } from "../src/content/inspector";
+import { buildPanel } from "../src/content/inspectorPanel";
+import { HOW_IT_WORKS_URL } from "../src/content/inspectorSections";
 import { TELL_AXES } from "../src/content/labels";
 import { decide, decideOwn } from "../src/shared/decide";
 import type { JudgeResponse } from "../src/shared/types";
@@ -149,6 +151,16 @@ describe("the breakdown panel", () => {
     expect(text()).toMatch(/Useful to readers/);
     expect(text()).toMatch(/Reader response/);
     expect(text()).not.toMatch(/\d+%/); // the bar itself is the number now
+  });
+
+  it("links each counter-signal bar to its How it works section in the clickable panel, but not in the hover tooltip", () => {
+    const r = resp(0.5);
+    const data: InspectData = { urn: "u", text: "t", own: false, engagement: none, response: r, decision: decide(r, none, "highlight", "moderate"), mode: "highlight", sensitivity: "moderate", vote: null };
+    const links = [...buildPanel(data, { current: null, onPick: () => {}, canRefold: false, onRefold: () => {}, error: null }).querySelectorAll<HTMLAnchorElement>(".counterbars a.info")];
+    expect(links.map((a) => a.href)).toEqual(["sounds-like-a-person", "useful-to-readers", "reader-response"].map((id) => `${HOW_IT_WORKS_URL}#${id}`));
+    expect(links.every((a) => a.target === "_blank" && a.rel === "noopener")).toBe(true);
+    show(r);
+    expect(panelOf()!.querySelectorAll("a.info")).toHaveLength(0);
   });
 
   it("drops the old 'further from the centre' and 'vote with the mop icon' captions", () => {
