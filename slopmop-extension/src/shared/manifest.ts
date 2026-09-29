@@ -20,6 +20,10 @@ export interface ManifestValues {
   maxRateLimitPauseS: number;
   defaultRateLimitPauseS: number;
   blockedRecheckMs: number;
+  dcIpStrikeLimit: number;
+  dcIpStrikeWindowMs: number;
+  dcIpStrikeWindowMin: number;
+  dcIpPauseMs: number;
   // saved answers
   cacheTtlMs: number;
   engagementBandGrowth: number;
@@ -53,6 +57,10 @@ export const DEFAULT_MANIFEST: ManifestValues = {
   maxRateLimitPauseS: 60,
   defaultRateLimitPauseS: 5,
   blockedRecheckMs: HOUR_MS,
+  dcIpStrikeLimit: 50,
+  dcIpStrikeWindowMs: 20 * MINUTE_MS,
+  dcIpStrikeWindowMin: 8,
+  dcIpPauseMs: HOUR_MS,
   cacheTtlMs: 7 * DAY_MS,
   engagementBandGrowth: 1.25,
   lookaheadPx: 1500,

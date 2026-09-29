@@ -4,7 +4,7 @@ import { getSettings } from "../shared/settings";
 import type { JudgeResponse } from "../shared/types";
 import { refreshBadge } from "./badge";
 import { enqueue, prioritize } from "./queue";
-import { blockedHold, cooldownHold, dailyLimitHold } from "./serverState";
+import { blockedHold, cooldownHold, dailyLimitHold, dcIpPauseHold } from "./serverState";
 import { probeSoon, refreshUsage } from "./usage";
 import { loadStats, recordStat, statsReply } from "./stats";
 import { allTabs, blank, getTab, updateTab } from "./tabs";
@@ -26,7 +26,7 @@ async function judge(m: Extract<Msg, { type: "judge" }>, tabId: number | undefin
     return cached;
   }
   // Don't ask the server while it has said no: the daily counter hasn't reset, or the admin disabled this install.
-  const held = (await blockedHold()) ?? (await dailyLimitHold()) ?? (await cooldownHold());
+  const held = (await blockedHold()) ?? (await dailyLimitHold()) ?? (await cooldownHold()) ?? (await dcIpPauseHold());
   if (held) {
     probeSoon(); // the admin may have re-enabled this install or raised its limit: find out without waiting out the hold
     void updateTab(tabId, (t) => ({ ...t, errors: t.errors + 1, lastError: held.message }));

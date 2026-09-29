@@ -2,7 +2,7 @@ import { SERVER_URL } from "../shared/config";
 import { SECOND_MS, TRANSIENT_STATUSES } from "../shared/constants";
 import { live } from "../shared/manifest";
 import { learnPolicy } from "./policy";
-import { DISABLED_MESSAGE, limitMessage, rememberBlocked, rememberCooldown, rememberDailyLimit } from "./serverState";
+import { DATACENTER_IP_MESSAGE, DISABLED_MESSAGE, limitMessage, noteDatacenterRefusal, rememberBlocked, rememberCooldown, rememberDailyLimit } from "./serverState";
 import type { Attempt, ServerBody } from "./judgeTypes";
 
 /** The server's own explanation of an error, when it gave one (it always answers with {error, message}). */
@@ -66,7 +66,11 @@ export async function interpretFailure(res: Response, backoffMs: number): Promis
     return { kind: "stop", error };
   }
   if (res.status === 403 && body.error === "datacenter_ip") {
-    return { kind: "stop", error: "Slop Mop can't check posts from a VPN or cloud network. Turn the VPN off and try again." };
+    // Not necessarily a VPN the user chose: some corporate networks route traffic through the same cloud/hosting
+    // ranges. One refusal alone just fails this post open; enough of them and noteDatacenterRefusal pauses checking
+    // here for a while (see its own comment) so a scrolling user isn't silently refused post after post.
+    const paused = await noteDatacenterRefusal();
+    return { kind: "stop", error: paused ? paused.message : DATACENTER_IP_MESSAGE };
   }
   if (res.status === 429 && body.error === "ip_rate_limited") {
     // This network has used its hourly allowance: asking again sooner can't help, so wait as long as the server says.
