@@ -47,8 +47,10 @@ h4.sloppr{display:flex;align-items:baseline;gap:var(--space-3);color:var(--text-
 svg.radar{display:block;width:100%;height:auto;margin:var(--space-1) 0 0}
 svg.radar text{font:var(--type-label);font-size:10px;fill:var(--text-muted)}
 svg.radar text.hot{fill:var(--text-body);font-weight:var(--weight-bold)}
-.counterbars{display:grid;grid-template-columns:140px 1fr;gap:var(--space-3) var(--space-4);align-items:center;margin-top:var(--space-5)}
-.counterbars .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:var(--type-body-sm)}
+.counterbars{display:grid;grid-template-columns:156px 1fr;gap:var(--space-3) var(--space-4);align-items:center;margin-top:var(--space-5)}
+.counterbars .n{display:flex;align-items:center;gap:var(--space-2);min-width:0;font:var(--type-body-sm)}
+.counterbars .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.info{flex:0 0 auto;display:inline-flex;color:var(--text-faint)}.info:hover,.info:focus-visible{color:var(--blue-500)}
 .rows{display:grid;grid-template-columns:130px 1fr 34px;gap:var(--space-3) var(--space-4);align-items:center;margin-top:var(--space-2)}
 .rows .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar{height:6px;border-radius:var(--radius-pill);background:var(--paper-200);position:relative;overflow:hidden}.bar i{position:absolute;inset:0 auto 0 0;border-radius:var(--radius-pill)}

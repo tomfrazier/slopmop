@@ -126,11 +126,11 @@ export const TELLS: readonly Trait[] = [
 export const HUMAN_VOICE: Trait = {
   id: "humanVoice",
   question:
-    "How strongly does `post` sound like one specific person writing in their own voice? Consider first person, direct address, casual qualifiers ('pretty', 'sort of'), contractions, personal or narrative references ('last year', 'my manager'), genuine enthusiasm, parenthetical asides, and uneven sentence rhythm.",
+    "How strongly does `post` sound like one specific person writing in their own voice, rather than a generic professional persona? Look for what a template would not produce: idiosyncratic word choice, specific personal detail (names, places, dates or numbers from their own life or work), casual qualifiers ('pretty', 'sort of'), contractions, parenthetical asides, and uneven sentence rhythm. First person, a company name, or 'I believe' framing is not a voice on its own: anyone writing on someone's behalf uses those too.",
   levels: [
     "Impersonal and uniform; no identifiable person behind it.",
-    "A little first person, but generic.",
-    "Clear personal voice with some specific references and natural rhythm.",
+    "First person or a named company, but the phrasing and rhythm could be anyone's.",
+    "A recognisable voice: some personal specifics, and phrasing or rhythm that feels like this writer's own.",
     "Unmistakably one person: idiosyncratic phrasing, specific personal detail, varied rhythm, asides.",
   ],
 };
@@ -139,12 +139,12 @@ export const HUMAN_VOICE: Trait = {
 export const USEFULNESS: Trait = {
   id: "usefulness",
   question:
-    "Setting aside who or what wrote `post`, how useful is it to a working professional? Useful means concrete, specific, novel, or actionable. `engagement` is what readers have done with it so far (reactions, comments, reposts), as observed fact: real discussion and reposts are evidence that people found something in it, while a pile of reactions alone is weak evidence. `previousAssessment`, when present, is your earlier answer and the engagement then, so weigh what has changed since; do not just repeat it.",
+    "Setting aside who or what wrote `post`, how much could a working professional learn from it or act on? Count only what the post itself supplies: specific facts, numbers, named examples, first-hand experience with concrete detail, or a method a reader could follow. An opinion, position, framing or call for change is not useful on its own however well argued, and neither is citing a well-known source or disclaimer or promising more to come. `engagement` is what readers have done with it so far (reactions, comments, reposts), as observed fact: real discussion and reposts are evidence that people found something in it, while a pile of reactions alone is weak evidence, and little or no engagement may just mean the post is new. `previousAssessment`, when present, is your earlier answer and the engagement then, so weigh what has changed since; do not just repeat it.",
   levels: [
-    "Nothing a reader could use: platitudes or self-promotion.",
-    "Familiar advice with little that is specific.",
-    "Some specific, actionable, or genuinely informative content.",
-    "Substantial: concrete details, real data or experience, or an insight a reader could act on today.",
+    "Nothing a reader could use: platitudes, self-promotion, or a teaser for other content.",
+    "Opinion, commentary or familiar advice: the reader learns the author's view but no fact, example or method they didn't already have.",
+    "At least one specific thing a typical reader in the field wouldn't already know: a concrete example, number, first-hand result, or step they could follow.",
+    "Substantial: several concrete details, real data or first-hand experience, and something a reader could act on today.",
   ],
 };
 

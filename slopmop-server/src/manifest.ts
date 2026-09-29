@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { DAY_MS, HOUR_MS, SECOND_MS, WEIGHT_CACHE_MS } from "./constants.js";
+import { DAY_MS, HOUR_MS, MINUTE_MS, SECOND_MS, WEIGHT_CACHE_MS } from "./constants.js";
 import type { Db } from "./db/types.js";
 import { historyInsert, readHistory } from "./settingHistory.js";
 import type { Thresholds } from "./scoringStore.js";
@@ -35,6 +35,14 @@ export const MANIFEST_FIELDS: readonly ManifestField[] = [
   f("requests", "maxRateLimitPauseS", "Longest rate-limit wait (s)", 60, 1, 600, "The longest 'slow down' that is honoured."),
   f("requests", "defaultRateLimitPauseS", "Rate-limit wait when none is given (s)", 5, 1, 120, "A guess for when the server doesn't say."),
   f("requests", "blockedRecheckMs", "Look again after being disabled (ms)", HOUR_MS, 60_000, DAY_MS, "How often a disabled install checks whether it is back."),
+  // A scrolling user may not notice a single "can't check posts from this network" message for many posts, so the
+  // extension pauses itself instead of asking (and getting refused) forever. A network is given the benefit of the
+  // doubt the first time (the count or the timed count below, whichever comes first); once it has paused once, the
+  // very next refusal pauses it again immediately, since the pattern is already established.
+  f("requests", "dcIpStrikeLimit", "Self-pause after this many datacenter-IP refusals in a row", 50, 5, 500, "First time only. Resets on any successful check."),
+  f("requests", "dcIpStrikeWindowMs", "...or after refusals keep happening for (ms)", 20 * MINUTE_MS, 60_000, 6 * HOUR_MS, "Catches a slow scroller who won't reach the count above quickly."),
+  f("requests", "dcIpStrikeWindowMin", "...as long as at least this many happened in that window", 8, 2, 500, "Below this, one stray refusal in the window pauses nothing."),
+  f("requests", "dcIpPauseMs", "How long a datacenter-IP self-pause lasts", HOUR_MS, 5 * MINUTE_MS, DAY_MS, "How often it tries again to see if the network has changed."),
   // ---- cache: what the extension remembers ----
   f("cache", "cacheTtlMs", "Trust a saved answer for (ms)", 7 * DAY_MS, HOUR_MS, 90 * DAY_MS, "After this the post is asked about again."),
   f("cache", "engagementBandGrowth", "Ask again when engagement grows by", 1.25, 1.05, 10, "A ratio: 1.25 = a quarter more reactions, comments and reposts together. The server decides whether Jev is re-run."),

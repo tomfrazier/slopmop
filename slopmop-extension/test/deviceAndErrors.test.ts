@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // The device id and the clearer failures: what the popup shows a user, and what the background says when the server says no.
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mem: Record<string, any> = {};
 let sets = 0;
@@ -24,6 +24,10 @@ const failure = await import("../src/background/judgeFailure");
 const { noteProblem, clearProblem } = await import("../src/background/problem");
 const { refreshUsage } = await import("../src/background/usage");
 const { supportText, paintDevice } = await import("../src/popup/device");
+const { dcIpPauseHold, clearDatacenterStrikes } = await import("../src/background/serverState");
+const { paintUsage } = await import("../src/popup/statsPanel");
+const { live } = await import("../src/shared/manifest");
+const dcIp = () => json(403, { error: "datacenter_ip", message: "Requests from cloud or hosting-provider IP ranges aren't accepted." });
 
 beforeEach(() => {
   for (const k of Object.keys(mem)) delete mem[k];
@@ -42,10 +46,12 @@ describe("what a failure says", () => {
     expect((r as { error: string }).error).toBe("server 404: That content hasn't been checked yet.");
   });
 
-  it("a VPN or cloud network gets a plain instruction, and no retry", async () => {
+  it("a datacenter-IP refusal gets a plain explanation and no retry, on its own it doesn't pause checking", async () => {
     const r = await failure.interpretFailure(json(403, { error: "datacenter_ip", message: "Requests from cloud or hosting-provider IP ranges aren't accepted." }), 1000);
     expect(r).toMatchObject({ kind: "stop" });
-    expect((r as { error: string }).error).toMatch(/VPN off/);
+    expect((r as { error: string }).error).toMatch(/cloud or hosting address/);
+    expect(mem.dcIpPause).toBeUndefined();
+    expect(mem.dcIpStrikes).toMatchObject({ count: 1 });
   });
 
   it("an hourly limit on the network stops asking until the server says it is over", async () => {
@@ -55,6 +61,80 @@ describe("what a failure says", () => {
     expect(mem.cooldown.message).toMatch(/30 min/);
     expect(mem.cooldown.until).toBeGreaterThan(Date.now() + 1700_000);
     expect(mem.cooldown.until).toBeLessThanOrEqual(Date.now() + 1800_000);
+  });
+});
+
+describe("self-pausing on a datacenter IP", () => {
+  const thresholds = { ...live.values };
+  beforeEach(() => {
+    Object.assign(live.values, { dcIpStrikeLimit: 3, dcIpStrikeWindowMs: 10 * 60_000, dcIpStrikeWindowMin: 5, dcIpPauseMs: 3_600_000 });
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    Object.assign(live.values, thresholds);
+    vi.useRealTimers();
+  });
+
+  it("gives a network the benefit of the doubt for a run of refusals, then pauses checking here for a while", async () => {
+    await failure.interpretFailure(dcIp(), 1000);
+    expect(await dcIpPauseHold()).toBeNull();
+    await failure.interpretFailure(dcIp(), 1000);
+    expect(await dcIpPauseHold()).toBeNull();
+    const r = await failure.interpretFailure(dcIp(), 1000); // the 3rd, at dcIpStrikeLimit
+    expect(mem.dcIpStrikes).toBeUndefined(); // the running count is cleared once it turns into a pause
+    const hold = await dcIpPauseHold();
+    expect(hold).toMatchObject({ message: expect.stringMatching(/Checking is paused here.*try again automatically/) });
+    expect((r as { error: string }).error).toBe(hold!.message);
+    expect(hold!.until).toBeGreaterThan(Date.now() + 3_500_000);
+  });
+
+  it("also pauses a slow-drip pattern once enough refusals have spread over the time window, without reaching the count", async () => {
+    live.values.dcIpStrikeLimit = 100; // high enough that only the timed path below can trigger it
+    const start = Date.now();
+    for (let i = 0; i < 4; i++) await failure.interpretFailure(dcIp(), 1000); // below dcIpStrikeWindowMin (5)
+    expect(await dcIpPauseHold()).toBeNull();
+    vi.setSystemTime(start + 10 * 60_000 + 1000); // dcIpStrikeWindowMs has now passed since the 1st refusal
+    await failure.interpretFailure(dcIp(), 1000); // the 5th (dcIpStrikeWindowMin), spread past the window: pauses
+    expect(await dcIpPauseHold()).not.toBeNull();
+  });
+
+  it("a success in between resets the run, so an isolated refusal never pauses anything", async () => {
+    await failure.interpretFailure(dcIp(), 1000);
+    await failure.interpretFailure(dcIp(), 1000);
+    await clearDatacenterStrikes(); // stands in for a real success, which calls this same reset
+    await failure.interpretFailure(dcIp(), 1000);
+    expect(mem.dcIpStrikes).toMatchObject({ count: 1 });
+    expect(await dcIpPauseHold()).toBeNull();
+  });
+
+  it("pauses again on the very first refusal once a network has paused before, no grace period the second time", async () => {
+    for (let i = 0; i < 3; i++) await failure.interpretFailure(dcIp(), 1000);
+    expect(await dcIpPauseHold()).not.toBeNull();
+    await chrome.storage.local.remove("dcIpPause"); // the pause expired
+    const r = await failure.interpretFailure(dcIp(), 1000); // a single refusal is enough this time
+    expect(await dcIpPauseHold()).not.toBeNull();
+    expect((r as { error: string }).error).toMatch(/Checking is paused here/);
+  });
+});
+
+describe("the popup's usage box", () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div class="usage-box"><span id="usage-n"></span><span id="usage-of"></span><div id="usage-bar"></div></div><p id="usage-note"></p>';
+  });
+
+  it("shows a datacenter-IP pause the same way as being disabled: full, and the reason underneath", async () => {
+    await chrome.storage.local.set({ usage: { used: 3, limit: 250, resetsAt: new Date(Date.now() + 3600_000).toISOString() }, dcIpPause: { until: Date.now() + 1800_000, message: "Checking is paused here: try again at 3:00 PM." } });
+    await paintUsage();
+    expect(document.getElementById("usage-n")!.textContent).toBe("250"); // shows the limit, not what's actually been used, like a daily-limit hold does
+    expect(document.querySelector(".usage-box")!.classList.contains("full")).toBe(true);
+    expect(document.getElementById("usage-note")!.textContent).toBe("Checking is paused here: try again at 3:00 PM.");
+  });
+
+  it("goes back to normal once the pause has passed", async () => {
+    await chrome.storage.local.set({ usage: { used: 3, limit: 250, resetsAt: new Date(Date.now() + 3600_000).toISOString() }, dcIpPause: { until: Date.now() - 1, message: "stale" } });
+    await paintUsage();
+    expect(document.getElementById("usage-n")!.textContent).toBe("3");
+    expect(document.querySelector(".usage-box")!.classList.contains("full")).toBe(false);
   });
 });
 

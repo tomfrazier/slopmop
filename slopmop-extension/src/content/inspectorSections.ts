@@ -1,7 +1,7 @@
 import { displayScore, displayZones } from "../shared/display";
 import { live } from "../shared/manifest";
 import { PALETTE } from "../shared/palette";
-import { h } from "../shared/dom";
+import { h, s } from "../shared/dom";
 import type { Community, Explain } from "../shared/types";
 import type { VerdictTone } from "../shared/verdict";
 import { TONE_DARK, TONE_STYLE } from "../shared/verdictStyle";
@@ -118,8 +118,28 @@ export function strongestSigns(data: InspectData, e: Explain) {
   return named.length ? h("p", { class: "signals" }, "Strongest signs: ", h("b", {}, named.join(", "))) : h("p", { class: "signals" }, "No strong signs of AI writing.");
 }
 
-/** A counter-signal bar with no trailing percentage (the bar itself is the number). */
-export const personBar = (label: string, val: number) => [h("span", { class: "n" }, label), bar(val, PALETTE.blue500)];
+/** Where each counter-signal bar is explained. */
+export const HOW_IT_WORKS_URL = "https://slopmop.lol/how-it-works.html";
+
+/** A small circled "i" that opens the How it works page at `anchor`, in a new tab. */
+function infoLink(label: string, anchor: string): HTMLElement {
+  const icon = s(
+    "svg",
+    { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "aria-hidden": "true", focusable: "false" },
+    s("circle", { cx: 12, cy: 12, r: 10 }),
+    s("path", { d: "M12 16v-4M12 8h.01" }),
+  );
+  return h("a", { class: "info", href: `${HOW_IT_WORKS_URL}#${anchor}`, target: "_blank", rel: "noopener", "aria-label": `How "${label}" works`, title: `How "${label}" works` }, icon);
+}
+
+/**
+ * A counter-signal bar with no trailing percentage (the bar itself is the number). With `anchor`, the label carries an "i"
+ * link to that section of the How it works page; leave it out where the panel can't be clicked (the hover tooltip).
+ */
+export const personBar = (label: string, val: number, anchor?: string) => [
+  h("span", { class: "n" }, h("span", { class: "t" }, label), anchor ? infoLink(label, anchor) : null),
+  bar(val, PALETTE.blue500),
+];
 
 /** "3 flagged as slop · 1 maybe · 2 no", low-priority at the very bottom (most posts have none). */
 export function communityLine(c: Community | null | undefined): HTMLElement {
