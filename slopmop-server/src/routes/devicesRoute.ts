@@ -31,5 +31,5 @@ export async function devicesRoute(request: Request, ctx: Ctx): Promise<Response
     offset: whole(p.get("offset"), 0, 1_000_000),
   };
   const { total, devices } = await ctx.store.clients.list(query);
-  return json(200, { total, offset: query.offset, limit: query.limit, devices, defaults: await ctx.limits.current() });
+  return json(200, { total, offset: query.offset, limit: query.limit, devices, defaults: await ctx.limits.current(), retentionDays: ctx.config.eventRetentionDays });
 }

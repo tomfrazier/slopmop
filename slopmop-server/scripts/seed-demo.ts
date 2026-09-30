@@ -37,7 +37,7 @@ for (let n = 0; n < 2500; n++) {
       ? { network: "linkedin", installId: install, contentId: post.id, kind: "error", detail: "APIConnectionError", latencyMs: 30000 }
       : roll < 0.03
         ? { network: "linkedin", installId: install, contentId: post.id, kind: "limited" }
-        : { network: "linkedin", installId: install, contentId: post.id, kind: cached ? "cached" : "scored", inputTokens: cached ? 0 : 3800 + Math.floor(rnd() * 800), outputTokens: cached ? 0 : 40, latencyMs: cached ? null : 700 + Math.floor(rnd() * 1800), aiLikelihood: post.ai },
+        : { network: "linkedin", installId: install, contentId: post.id, kind: cached ? "cached" : "scored", inputTokens: cached ? 0 : 3800 + Math.floor(rnd() * 800), outputTokens: cached ? 0 : 40, latencyMs: cached ? null : 150 + Math.floor(rnd() * rnd() * 450), aiLikelihood: post.ai },
   );
   if (rnd() < 0.08) {
     const truth = post.ai > 0.6 ? (rnd() < 0.8 ? "probably" : "no") : post.ai > 0.35 ? "maybe" : rnd() < 0.85 ? "no" : "probably";

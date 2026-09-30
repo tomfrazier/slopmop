@@ -1,5 +1,5 @@
 // Every error and refused request in the chosen range, filterable and paged (the Overview only shows the latest few).
-import { api, prefs } from "../api.js";
+import { api, prefs, savePrefs } from "../api.js";
 import { el } from "../dom.js";
 import { fmt, rangeLabel } from "../format.js";
 import { hooks } from "../hooks.js";
@@ -21,6 +21,21 @@ async function fetchPage() {
   paint();
 }
 export const reloadErrors = () => fetchPage().catch((e) => alert(e.message));
+
+/** The widest range the picker offers: everything the event log keeps. */
+const WIDEST = "90d";
+
+/**
+ * Opens the Errors page on one device's errors, over everything kept, so it matches the Devices page's count (which isn't limited
+ * to the range picked at the top).
+ */
+export function showDeviceErrors(device) {
+  Object.assign(V, { kind: "error", q: "", detail: "", device, offset: 0, data: null });
+  prefs.range = WIDEST;
+  savePrefs();
+  if (location.hash === "#/errors") void reloadErrors();
+  else location.hash = "#/errors";
+}
 const filter = (change) => { Object.assign(V, change, { offset: 0 }); void reloadErrors(); };
 
 const what = (r) => el("span", { class: `pill ${r.kind}` }, r.kind === "limited" ? refusalName(r.detail) : "error");
@@ -33,7 +48,13 @@ function results(container) {
   const chips = el("div", { class: "chips" },
     d.facets.map((f) => el("button", { class: "chip", "aria-pressed": String(V.detail === (f.detail ?? "") && V.detail !== ""), title: f.detail ?? "", onclick: () => filter({ detail: V.detail === f.detail ? "" : f.detail ?? "" }) }, el("span", { class: `pill ${f.kind}` }, f.kind === "limited" ? "refused" : "error"), ` ${causeText(f)} `, el("b", null, fmt.n(f.n)))),
   );
-  if (!d.rows.length) return container.replaceChildren(d.facets.length ? chips : null, el("div", { class: "empty" }, "Nothing matches. " + (d.total === 0 && !V.q && !V.detail && !V.device && V.kind === "all" ? "No errors or refusals in this range. \u{1F389}" : "")));
+  if (!d.rows.length) {
+    // A device's errors can be older than the range at the top (the Devices page counts everything kept): offer the widest range.
+    const widen = d.range !== WIDEST && (V.device || V.q || V.detail)
+      ? el("button", { onclick: () => { prefs.range = WIDEST; savePrefs(); V.offset = 0; void reloadErrors(); } }, `Search the last ${d.retentionDays} days`)
+      : null;
+    return container.replaceChildren(d.facets.length ? chips : null, el("div", { class: "empty" }, `Nothing matches in the ${rangeLabel(d.range)}. ` + (d.total === 0 && !V.q && !V.detail && !V.device && V.kind === "all" ? "No errors or refusals in this range. \u{1F389}" : ""), widen ? " " : null, widen));
+  }
   const from = d.offset + 1;
   const to = d.offset + d.rows.length;
   container.replaceChildren(

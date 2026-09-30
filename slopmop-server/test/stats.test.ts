@@ -26,7 +26,7 @@ describe.each(ADAPTERS)("GET /api/v1/admin/stats (%s)", (kind) => {
     const { body } = await h.call("stats", undefined, admin);
     expect(body.summary).toMatchObject({ checks: 0, jevCalls: 0, cacheHitPct: null, costUsd: 0 });
     expect(body.installs.total).toBe(0);
-    expect(body.series.length).toBeGreaterThan(24);
+    expect(body.series).toHaveLength(8); // 7 days by day: a partial first day, six whole ones, and today so far
     expect(body.hourOfDay).toHaveLength(24);
     expect(body.aiHistogram).toHaveLength(10);
     expect(body.devices).toEqual([]);
@@ -75,7 +75,7 @@ describe.each(ADAPTERS)("GET /api/v1/admin/stats (%s)", (kind) => {
     const a = await h.call("judge", judgeBody()); // ai 0.9
     await h.call("vote", { network: "linkedin", contentId: a.body.contentId, vote: "no" });
     const { body } = await h.call("stats", undefined, { ...admin, query: "?range=30d&network=linkedin" });
-    expect(body.bucketMs).toBe(86400_000);
+    expect(body).toMatchObject({ unit: "week", units: ["day", "week"], tz: "UTC" });
     expect(body.posts.jevOverreached).toHaveLength(1);
     expect(body.community.calibration).toEqual([expect.objectContaining({ vote: "no", jevAgreesPct: 0 })]);
     h.clock.t += 40 * 86400_000; // everything is now outside a 24h window
@@ -102,5 +102,62 @@ describe.each(ADAPTERS)("GET /api/v1/admin/stats (%s)", (kind) => {
     await h.call("judge", judgeBody({ postText: OTHER }));
     const { body } = await h.call("stats", undefined, admin);
     expect(body.summary.hedged).toBe(1);
+  });
+});
+
+describe.each(ADAPTERS)("stats in the admin's timezone (%s)", (kind) => {
+  const PT = "America/Los_Angeles";
+  const q = (query: string) => ({ headers: { authorization: "Bearer s3cret" }, query });
+  const post = (n: number) => judgeBody({ postText: `A distinct post number ${n} with enough words in it to be judged as usual, again and again.` });
+
+  it("rejects an unknown timezone or unit", async () => {
+    const h = await makeHarness(kind, { ADMIN_TOKEN: "s3cret" });
+    expect((await h.call("stats", undefined, q("?tz=Mars/Base"))).status).toBe(400);
+    expect((await h.call("stats", undefined, q("?unit=fortnight"))).status).toBe(400);
+  });
+
+  it("charts by the unit asked for, or the range's default, with days starting at the zone's midnight", async () => {
+    const h = await makeHarness(kind, { ADMIN_TOKEN: "s3cret" }); // the clock is 2026-09-19 15:00 UTC = 08:00 PDT
+    const byDefault = (await h.call("stats", undefined, q(`?range=7d&tz=${encodeURIComponent(PT)}`))).body;
+    expect(byDefault.unit).toBe("day");
+    expect(byDefault.series).toHaveLength(8); // a partial first day, six whole days, and today so far
+    for (const b of byDefault.series.slice(1)) expect(new Date(b.t).getUTCHours()).toBe(7); // PDT midnight is 07:00 UTC
+    const hourly = (await h.call("stats", undefined, q(`?range=7d&unit=hour&tz=${encodeURIComponent(PT)}`))).body;
+    expect(hourly.unit).toBe("hour");
+    expect(hourly.series.length).toBeGreaterThan(24 * 7 - 1);
+    const unsuited = (await h.call("stats", undefined, q("?range=24h&unit=month"))).body;
+    expect(unsuited.unit).toBe("hour"); // a month bucket makes no sense for a day: the range's default is used
+    const monthly = (await h.call("stats", undefined, q(`?range=90d&tz=${encodeURIComponent(PT)}`))).body;
+    expect(monthly.series.map((b: any) => b.t).slice(1).map((t: number) => new Date(t - 7 * 3600_000).getUTCDate())).toEqual([1, 1, 1]); // Jul, Aug, Sep 1 (all PDT)
+  });
+
+  it("counts DAU by the zone's day, and puts hour of day in the zone", async () => {
+    const h = await makeHarness(kind, { ADMIN_TOKEN: "s3cret" });
+    h.clock.t = Date.UTC(2026, 8, 19, 3, 0); // 20:00 PDT on the 18th
+    await h.call("judge", post(1), { install: "install-early-xxxxxxx" });
+    h.clock.t = Date.UTC(2026, 8, 19, 15, 0); // 08:00 PDT on the 19th
+    await h.call("judge", post(2), { install: "install-later-xxxxxxx" });
+    const utc = (await h.call("stats", undefined, q("?range=7d"))).body;
+    expect(utc.installs).toMatchObject({ dau: 2, dauYesterday: 0 }); // both on the 19th in UTC
+    const pt = (await h.call("stats", undefined, q(`?range=7d&tz=${encodeURIComponent(PT)}`))).body;
+    expect(pt.installs).toMatchObject({ dau: 1, dauYesterday: 1 });
+    expect(pt.installs.dayStart).toBe(Date.UTC(2026, 8, 19, 7, 0));
+    expect(pt.installs.limitResetsAt).toBe(Date.UTC(2026, 8, 20)); // the daily limit still resets at UTC midnight
+    expect(pt.hourOfDay[20].checks).toBe(1);
+    expect(pt.hourOfDay[8].checks).toBe(1);
+    expect(pt.series.reduce((n: number, b: any) => n + b.scored + b.cached, 0)).toBe(2);
+  });
+});
+
+describe.each(ADAPTERS)("refusals in the stats (%s)", (kind) => {
+  it("counts only daily-limit refusals as daily-limit hits, and the rest by kind", async () => {
+    const h = await makeHarness(kind, { ADMIN_TOKEN: "s3cret", DAILY_CHECK_LIMIT: "1" });
+    await h.call("judge", judgeBody());
+    await h.call("judge", judgeBody()); // over the daily limit
+    const events = h.ctx.store.events;
+    for (const detail of ["datacenter_ip", "datacenter_ip", "ip_rate_limit", "rate_limit", "disabled"]) await events.record({ network: "linkedin", installId: "install-other-xxxxxxx", kind: "limited", detail });
+    const { body } = await h.call("stats", undefined, { headers: { authorization: "Bearer s3cret" }, query: "?range=24h" });
+    expect(body.summary).toMatchObject({ limitHits: 1, datacenterRefused: 2, ipLimited: 1, rateLimited: 1, blocked: 1 });
+    expect(body.series.reduce((n: number, b: any) => n + b.limited, 0)).toBe(1);
   });
 });

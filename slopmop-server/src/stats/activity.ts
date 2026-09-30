@@ -1,8 +1,11 @@
-import { DAY_MS, HOUR_MS } from "../constants.js";
+import { HOUR_MS } from "../constants.js";
 import { num, round, type Scope } from "./scope.js";
+import { bucketCte, partsIn } from "./zone.js";
 
 export interface Bucket {
   t: number;
+  /** Where the bucket stops (exclusive); the last one runs on past now. */
+  end: number;
   scored: number;
   cached: number;
   errors: number;
@@ -15,16 +18,20 @@ export interface Bucket {
   votes: { no: number; maybe: number; probably: number };
 }
 
-const emptyBucket = (t: number): Bucket => ({ t, scored: 0, cached: 0, errors: 0, limited: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, activeInstalls: 0, newInstalls: 0, votes: { no: 0, maybe: 0, probably: 0 } });
+const emptyBucket = (t: number): Bucket => ({ t, end: t, scored: 0, cached: 0, errors: 0, limited: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, activeInstalls: 0, newInstalls: 0, votes: { no: 0, maybe: 0, probably: 0 } });
 
-/** Daily-limit hits only: rate-limit refusals and disabled-client blocks are counted separately. */
-const DAILY_LIMIT_HITS = `SUM(kind='limited' AND COALESCE(detail,'') NOT IN ('rate_limit','disabled'))`;
+/**
+ * Daily-limit hits only: requests refused because the install had used its checks for the UTC day. Every other refusal (the
+ * per-minute rate limit, the per-IP hourly limit, a datacenter address, a disabled device) is counted on its own. Refusals
+ * logged before they carried a detail were all daily-limit hits.
+ */
+const DAILY_LIMIT_HITS = `SUM(kind='limited' AND COALESCE(detail,'daily_limit') = 'daily_limit')`;
 
 /** Whole-range totals over the activity log, plus the raw row the summary is built from. */
 export async function eventTotals(s: Scope) {
   const [row] = await s.q(
     `SELECT SUM(kind='scored') scored, SUM(kind='cached') cached, SUM(kind='error') errors, ${DAILY_LIMIT_HITS} limited,
-            SUM(detail = 'rate_limit') rate_limited, SUM(detail = 'disabled') blocked,
+            SUM(kind='limited' AND detail = 'rate_limit') rate_limited, SUM(kind='limited' AND detail = 'ip_rate_limit') ip_limited, SUM(kind='limited' AND detail = 'datacenter_ip') datacenter, SUM(kind='limited' AND detail = 'disabled') blocked,
             SUM(input_tokens) tin, SUM(output_tokens) tout, COUNT(DISTINCT install_hash) active, SUM(detail = 'hedged') hedged,
             AVG(CASE WHEN kind='scored' THEN latency_ms END) lat_avg, MAX(CASE WHEN kind='scored' THEN latency_ms END) lat_max
      FROM events WHERE at >= ?${s.netSql()}`,
@@ -33,51 +40,54 @@ export async function eventTotals(s: Scope) {
   return row;
 }
 
-/** One bucket per hour or day across the range, filled from the log, new installs and votes. */
+/** One bucket per chart unit across the range (hours, or days, weeks or months in the admin's timezone), filled from the log, new installs and votes. */
 export async function timeSeries(s: Scope): Promise<Bucket[]> {
-  const { since, size } = s;
-  const bucket = `CAST(at / ${size} AS INTEGER) * ${size}`;
+  const cte = bucketCte(s.buckets);
   const [events, fresh, votes] = await Promise.all([
     s.q(
-      `SELECT ${bucket} b, SUM(kind='scored') scored, SUM(kind='cached') cached, SUM(kind='error') errors, ${DAILY_LIMIT_HITS} limited,
+      `${cte} SELECT b.t b, SUM(kind='scored') scored, SUM(kind='cached') cached, SUM(kind='error') errors, ${DAILY_LIMIT_HITS} limited,
               SUM(input_tokens) tin, SUM(output_tokens) tout, COUNT(DISTINCT install_hash) active
-       FROM events WHERE at >= ?${s.netSql()} GROUP BY b`,
-      [since, ...s.netArgs()],
+       FROM b JOIN events ON at >= b.t AND at < b.e WHERE 1 = 1${s.netSql()} GROUP BY b.t`,
+      s.netArgs(),
     ),
-    s.q(`SELECT CAST(first_seen / ${size} AS INTEGER) * ${size} b, COUNT(*) n FROM installs WHERE first_seen >= ? GROUP BY b`, [since]),
-    s.q(`SELECT ${bucket} b, SUM(vote='no') n, SUM(vote='maybe') m, SUM(vote='probably') p FROM votes WHERE at >= ?${s.netSql()} GROUP BY b`, [since, ...s.netArgs()]),
+    s.q(`${cte} SELECT b.t b, COUNT(*) n FROM b JOIN installs ON first_seen >= b.t AND first_seen < b.e GROUP BY b.t`),
+    s.q(`${cte} SELECT b.t b, SUM(vote='no') n, SUM(vote='maybe') m, SUM(vote='probably') p FROM b JOIN votes ON at >= b.t AND at < b.e WHERE 1 = 1${s.netSql()} GROUP BY b.t`, s.netArgs()),
   ]);
 
-  const buckets = new Map<number, Bucket>();
-  for (let t = since; t <= s.now; t += size) buckets.set(t, emptyBucket(t));
+  const byStart = new Map<number, Bucket>(s.buckets.map((x) => [x.t, { ...emptyBucket(x.t), end: x.end }]));
   for (const r of events) {
-    const b = buckets.get(num(r.b));
+    const b = byStart.get(num(r.b));
     if (!b) continue;
     Object.assign(b, { scored: num(r.scored), cached: num(r.cached), errors: num(r.errors), limited: num(r.limited), inputTokens: num(r.tin), outputTokens: num(r.tout), activeInstalls: num(r.active) });
     b.costUsd = round(s.cost(b.inputTokens, b.outputTokens), 6);
   }
   for (const r of fresh) {
-    const b = buckets.get(num(r.b));
+    const b = byStart.get(num(r.b));
     if (b) b.newInstalls = num(r.n);
   }
   for (const r of votes) {
-    const b = buckets.get(num(r.b));
+    const b = byStart.get(num(r.b));
     if (b) b.votes = { no: num(r.n), maybe: num(r.m), probably: num(r.p) };
   }
-  return [...buckets.values()];
+  return [...byStart.values()];
 }
 
-/** Checks and spend by hour of the day (UTC): when people use it. */
+/** Checks and spend by hour of the day in the admin's timezone: when people use it. */
 export async function hourOfDay(s: Scope) {
   const slots = Array.from({ length: 24 }, (_, hour) => ({ hour, checks: 0, costUsd: 0 }));
+  // Grouped by UTC hour, then each hour is placed by its local hour, so daylight saving is handled hour by hour.
   const rows = await s.q(
-    `SELECT CAST((at % ${DAY_MS}) / ${HOUR_MS} AS INTEGER) h, SUM(kind IN ('scored','cached')) checks, SUM(input_tokens) tin, SUM(output_tokens) tout
-     FROM events WHERE at >= ?${s.netSql()} GROUP BY h`,
+    `SELECT CAST(at / ${HOUR_MS} AS INTEGER) hb, SUM(kind IN ('scored','cached')) checks, SUM(input_tokens) tin, SUM(output_tokens) tout
+     FROM events WHERE at >= ?${s.netSql()} GROUP BY hb`,
     [s.since, ...s.netArgs()],
   );
+  const tokens = slots.map(() => ({ tin: 0, tout: 0 }));
   for (const r of rows) {
-    const slot = slots[num(r.h)];
-    if (slot) Object.assign(slot, { checks: num(r.checks), costUsd: round(s.cost(num(r.tin), num(r.tout)), 6) });
+    const h = partsIn(num(r.hb) * HOUR_MS, s.tz).h;
+    slots[h].checks += num(r.checks);
+    tokens[h].tin += num(r.tin);
+    tokens[h].tout += num(r.tout);
   }
+  slots.forEach((slot, h) => (slot.costUsd = round(s.cost(tokens[h].tin, tokens[h].tout), 6)));
   return slots;
 }

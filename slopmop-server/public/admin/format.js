@@ -9,12 +9,6 @@ const partsOf = (t, opts) => Object.fromEntries(new Intl.DateTimeFormat("en-US",
 const DATE_TIME = { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" };
 /** The zone's short name at an instant: "PDT" or "PST" for Pacific (it follows daylight saving), or "UTC". */
 export const tzName = (t = Date.now()) => (zone() === "UTC" ? "UTC" : partsOf(t, { timeZoneName: "short" }).timeZoneName);
-/** The hour of day (0-23) in the zone at the moment a UTC hour of today starts, for relabelling the hour-of-day chart. */
-export const localHour = (utcHour) => {
-  const t = new Date();
-  t.setUTCHours(utcHour, 0, 0, 0);
-  return Number(partsOf(t, { hour: "2-digit" }).hour) % 24;
-};
 /** A clock time in the zone, like "5:00 PM PDT", for a moment given in UTC. */
 export const clock = (t) => new Intl.DateTimeFormat("en-US", { timeZone: zone(), hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(t));
 export const fmt = {
@@ -43,8 +37,12 @@ export const fmt = {
     const p = partsOf(t, DATE_TIME);
     return `${p.month}-${p.day}`;
   },
-  /** The UTC calendar date of a daily bucket (the server counts days from UTC midnight). */
-  utcDay: (t) => new Date(t).toISOString().slice(5, 10),
+  /** "Sep 19": a short date in the zone. */
+  date: (t) => new Intl.DateTimeFormat("en-US", { timeZone: zone(), month: "short", day: "numeric" }).format(new Date(t)),
+  /** "Sat, Sep 19, 2026". */
+  longDate: (t) => new Intl.DateTimeFormat("en-US", { timeZone: zone(), weekday: "short", month: "short", day: "numeric", year: "numeric" }).format(new Date(t)),
+  /** "Sep" or "Sep 2026". */
+  month: (t, withYear = false) => new Intl.DateTimeFormat("en-US", { timeZone: zone(), month: withYear ? "long" : "short", ...(withYear ? { year: "numeric" } : {}) }).format(new Date(t)),
   hour: (t) => {
     const p = partsOf(t, DATE_TIME);
     return `${p.month}-${p.day} ${p.hour}:00`;

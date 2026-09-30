@@ -69,7 +69,9 @@ describe("admin dashboard", () => {
     expect($(".side a[aria-current=page]")!.textContent).toBe("Overview");
     expect(headings()).toEqual(["Activity", "Busiest devices", "Errors and limit hits"]);
     expect($$(".kpi")).toHaveLength(14);
-    expect($$(".kpi .l").map((e) => e.textContent)).toEqual(expect.arrayContaining(["Checks", "DAU", "MAU"]));
+    expect($$(".kpi .lt").map((e) => e.textContent)).toEqual(expect.arrayContaining(["Checks", "DAU", "MAU"]));
+    const period = (label: string) => $$(".kpi").find((k) => k.querySelector(".lt")!.textContent === label)!.querySelector(".per")!.textContent;
+    expect([period("Errors"), period("Daily-limit hits"), period("DAU"), period("MAU"), period("Installs")]).toEqual(["7d", "7d", "today", "30 days", "all time"]);
     expect($$("svg.chart").length).toBeGreaterThanOrEqual(4);
     expect($$("details.fold").every((d) => (d as HTMLDetailsElement).open)).toBe(true); // the overview starts fully open
     const on = async (page: string) => {
@@ -333,6 +335,40 @@ describe("admin dashboard", () => {
     button("24h").click();
     await tick(150);
     expect(button("24h").getAttribute("aria-pressed")).toBe("true");
-    expect($(".top .sub")!.textContent).toMatch(/last 24 hours/);
+    expect($(".top .sub")!.textContent).toMatch(/last 24 hours, since/);
+  });
+
+  it("counts the charts over time by the unit picked, and a new range goes back to its own", async () => {
+    await openDashboard(KEY);
+    const pressed = () => $$(".unit-toggle button").filter((b) => b.getAttribute("aria-pressed") === "true").map((b) => b.textContent);
+    expect($$(".unit-toggle button").map((b) => b.textContent)).toEqual(["Hour", "Day"]); // 7d
+    expect(pressed()).toEqual(["Day"]);
+    button("Hour").click();
+    await tick(150);
+    expect(pressed()).toEqual(["Hour"]);
+    expect(document.body.textContent).toMatch(/Per hour/);
+    button("90d").click();
+    await tick(150);
+    expect($$(".unit-toggle button").map((b) => b.textContent)).toEqual(["Day", "Week", "Month"]);
+    expect(pressed()).toEqual(["Month"]);
+    button("24h").click();
+    await tick(150);
+    expect($(".unit-toggle")).toBeNull(); // only one way to chart a day
+  });
+
+  it("opens a device's errors from its count on the Devices page, over everything kept", async () => {
+    await h.ctx.store.events.record({ network: "linkedin", installId: "install-dash-0xxxx", kind: "error", detail: "APITimeoutError" });
+    h.clock.t += 3 * 86_400_000; // the error is now outside a 24h range
+    await openDashboard(KEY, "devices");
+    await tick(150);
+    const count = $$("button.linkbtn").find((b) => b.textContent === "1")!;
+    expect(count).toBeTruthy();
+    count.click();
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await tick(300);
+    expect(location.hash).toBe("#/errors");
+    expect(($("input[aria-label='Filter by device id or name']") as HTMLInputElement).value).toMatch(/^[0-9a-f]{8}$/);
+    expect(document.body.textContent).toMatch(/APITimeoutError/);
+    expect(button("90d").getAttribute("aria-pressed")).toBe("true");
   });
 });
