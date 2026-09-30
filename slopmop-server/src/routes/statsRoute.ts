@@ -1,12 +1,12 @@
 import type { Ctx } from "../ctx.js";
 import { HttpError, json } from "../http.js";
 import { getNetwork } from "../networks.js";
-import { computeStats, RANGES, type RangeKey } from "../stats/index.js";
+import { computeStats, RANGES, UNITS, ZONES, type RangeKey, type Unit, type Zone } from "../stats/index.js";
 import { scoreParts, type EngagementCounts } from "../scoring.js";
 import { applyWeights } from "../weights.js";
 import { requireAdmin, requireNetwork } from "./shared.js";
 
-/** Everything the admin dashboard (public/admin) shows. */
+/** Everything the admin dashboard (public/admin) shows. ?range= &network= &tz=UTC|America/Los_Angeles &unit=hour|day|week|month (charts; defaults by range). */
 export async function statsRoute(request: Request, ctx: Ctx): Promise<Response> {
   requireAdmin(request, ctx);
   const q = new URL(request.url).searchParams;
@@ -14,7 +14,11 @@ export async function statsRoute(request: Request, ctx: Ctx): Promise<Response> 
   if (!(range in RANGES)) throw new HttpError(400, "invalid_input", `range must be one of ${Object.keys(RANGES).join(", ")}.`);
   const network = q.get("network");
   if (network && !getNetwork(network)) requireNetwork(network); // throws the standard unsupported-network error
-  return json(200, await computeStats(ctx.store, { range, network, limits: await ctx.limits.current() }));
+  const tz = (q.get("tz") ?? "UTC") as Zone;
+  if (!ZONES.includes(tz)) throw new HttpError(400, "invalid_input", `tz must be one of ${ZONES.join(", ")}.`);
+  const unit = (q.get("unit") || undefined) as Unit | undefined;
+  if (unit && !UNITS.includes(unit)) throw new HttpError(400, "invalid_input", `unit must be one of ${UNITS.join(", ")}.`);
+  return json(200, await computeStats(ctx.store, { range, network, limits: await ctx.limits.current(), tz, unit }));
 }
 
 /** NDJSON of what Jev said and what people said, for tuning thresholds offline. Disabled unless ADMIN_TOKEN is set. */

@@ -60,7 +60,7 @@ function login(message) {
 /** Fetches (unless `refetch` is false and we already have data) and draws the page, then restarts the auto-refresh timer. */
 async function load(refetch = true) {
   if (!app.firstChild) app.replaceChildren(el("div", { class: "empty" }, "Loading…"));
-  if (refetch || !lastStats) [lastStats] = await Promise.all([api("/stats", { range: prefs.range, network: prefs.network }), loadWeights(), loadScoring(), loadManifest(), loadTuner(), loadLimits()]);
+  if (refetch || !lastStats) [lastStats] = await Promise.all([api("/stats", { range: prefs.range, network: prefs.network, tz: prefs.tz, unit: prefs.unit }), loadWeights(), loadScoring(), loadManifest(), loadTuner(), loadLimits()]);
   render(lastStats);
   clearInterval(timer);
   if (prefs.refresh) timer = setInterval(() => (currentPage() === "devices" ? void hooks.reloadDevices() : currentPage() === "errors" ? void hooks.reloadErrors() : currentPage() === "review" ? undefined : !W.dirty && !S.dirty && !M.dirty && void refresh()), AUTO_REFRESH_MS); // not while a weight edit is in progress; the device list reloads in place so a search isn't lost

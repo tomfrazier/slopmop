@@ -2,7 +2,9 @@ import { api, prefs, savePrefs } from "./api.js";
 import { el } from "./dom.js";
 import { fmt } from "./format.js";
 
-export const kpi = (label, value, detail, cls) => el("div", { class: "card kpi" }, el("div", { class: "l" }, label), el("div", { class: `v ${cls || ""}` }, value), detail ? el("div", { class: "d" }, detail) : null);
+/** A headline number. `period` ("7d", "today", "all time"...) says what it covers, shown beside the label. */
+export const kpi = (label, value, detail, cls, period) =>
+  el("div", { class: "card kpi" }, el("div", { class: "l" }, el("span", { class: "lt" }, label), period ? el("span", { class: "per" }, period) : null), el("div", { class: `v ${cls || ""}` }, value), detail ? el("div", { class: "d" }, detail) : null);
 export const card = (title, body, sub) => el("div", { class: "card" }, el("h2", null, title), sub ? el("div", { class: "sub card-sub" }, sub) : null, body);
 /** A card that just holds `body`, for sections that have no title of their own. */
 export const panel = (body, style) => el("div", { class: "card", style }, body);

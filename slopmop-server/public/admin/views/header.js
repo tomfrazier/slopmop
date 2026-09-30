@@ -9,12 +9,12 @@ const USES_RANGE = new Set(["overview", "errors", "posts"]); // the other sectio
 const RANGE_CHOICES = [["24h", "24h"], ["7d", "7d"], ["30d", "30d"], ["90d", "90d"]];
 
 /** A group of buttons that sets one preference and redraws. */
-const segmented = (choices, key) =>
+export const segmented = (choices, key, current = prefs[key], also = {}) =>
   el(
     "div",
     { class: "seg", role: "group" },
     choices.map(([value, label]) =>
-      el("button", { type: "button", "aria-pressed": String(prefs[key] === value), onclick: () => { prefs[key] = value; savePrefs(); hooks.refresh(); } }, label),
+      el("button", { type: "button", "aria-pressed": String(current === value), onclick: () => { Object.assign(prefs, { [key]: value }, also); savePrefs(); hooks.refresh(); } }, label),
     ),
   );
 
@@ -30,10 +30,10 @@ export function header(d, page = "overview") {
   return el(
     "div",
     { class: "top" },
-    el("div", { class: "title" }, el("div", null, el("h1", null, info.label), el("div", { class: "sub" }, `${info.note} · updated ${fmt.time(d.generatedAt)} · times in ${tzName()}${USES_RANGE.has(page) ? ` · ${rangeLabel(d.range)}` : ""}`))),
+    el("div", { class: "title" }, el("div", null, el("h1", null, info.label), el("div", { class: "sub" }, `${info.note} · updated ${fmt.time(d.generatedAt)} · times in ${tzName()}${USES_RANGE.has(page) ? ` · ${rangeLabel(d.range)}, since ${fmt.time(d.since)}` : ""}`))),
     el("div", { class: "grow" }),
     segmented(TIMEZONES, "tz"),
-    USES_RANGE.has(page) ? segmented(RANGE_CHOICES, "range") : null,
+    USES_RANGE.has(page) ? segmented(RANGE_CHOICES, "range", prefs.range, { unit: "" }) : null, // a new range starts on its own chart unit
     USES_RANGE.has(page) ? networkSelect(d) : null,
     el("label", null, el("input", { type: "checkbox", checked: prefs.refresh, onchange: (e) => { prefs.refresh = e.target.checked; savePrefs(); hooks.refresh(); } }), "Auto-refresh"),
     el("button", { onclick: () => hooks.refresh() }, "Refresh"),

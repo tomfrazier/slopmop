@@ -5,6 +5,7 @@ import { el } from "../dom.js";
 import { fmt } from "../format.js";
 import { hooks } from "../hooks.js";
 import { card, deviceCode } from "../widgets.js";
+import { showDeviceErrors } from "./errorsPage.js";
 
 const PAGE_SIZE = 50;
 const SEARCH_DELAY_MS = 250;
@@ -13,7 +14,7 @@ const COLUMNS = [
   ["Device", null],
   ["Today", "today"],
   ["Lifetime checks", "checks"],
-  ["Errors", "errors"],
+  ["Errors (all kept)", "errors"],
   ["Limit hits", "limitHits"],
   ["Votes", "votes"],
   ["First seen", "firstSeen"],
@@ -81,7 +82,7 @@ function row(r, defaults) {
       el("td", null, deviceCode(r), " ", statusPills(r)),
       el("td", { class: "r" }, el("div", { class: "today" }, `${fmt.n(r.today)} / ${fmt.n(daily)}`, el("div", { class: "bar", title: r.dailyLimit != null ? "This device's own daily limit" : "The default daily limit" }, el("span", { style: `width:${pct}%;background:${pct >= 100 ? "var(--red)" : "var(--blue)"}` })))),
       el("td", { class: "r" }, fmt.n(r.checks)),
-      el("td", { class: "r" }, r.errors ? el("span", { class: "warn" }, fmt.n(r.errors)) : "0"),
+      el("td", { class: "r" }, r.errors ? el("button", { class: "linkbtn warn", title: "Every error from this device, on the Errors page", onclick: () => showDeviceErrors(r.device) }, fmt.n(r.errors)) : "0"),
       el("td", { class: "r" }, r.limitHits ? el("span", { class: "warn" }, fmt.n(r.limitHits)) : "0"),
       el("td", { class: "r" }, fmt.n(r.votes)),
       el("td", null, fmt.time(r.firstSeen)),
@@ -129,7 +130,7 @@ export function devicesPage() {
   return card(
     "Devices",
     el("div", null, el("div", { class: "tools" }, search, status, el("button", { onclick: () => void reloadDevices() }, "Refresh")), el("div", { class: "mt-10" }, holder)),
-    "A device id is the short code the extension's popup shows, so a user can tell you which one is theirs. Give a device a name to spot it easily; limits set here override the defaults for that device only.",
+    "A device id is the short code the extension's popup shows, so a user can tell you which one is theirs. Give a device a name to spot it easily; limits set here override the defaults for that device only. Errors and limit hits count everything the log keeps, not the range on the other pages; click an error count to see them.",
   );
 }
 

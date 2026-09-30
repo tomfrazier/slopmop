@@ -23,6 +23,8 @@ export async function summarize(s: Scope, totals: Row | undefined, latencies: nu
     errorPct: checks + errors ? round(errors / (checks + errors), 4) : null,
     limitHits: num(totals?.limited),
     rateLimited: num(totals?.rate_limited),
+    ipLimited: num(totals?.ip_limited),
+    datacenterRefused: num(totals?.datacenter),
     blocked: num(totals?.blocked),
     hedged: num(totals?.hedged),
     inputTokens: num(totals?.tin),

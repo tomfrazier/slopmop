@@ -2,7 +2,8 @@
 const API = "/api/v1/admin";
 const TOKEN_KEY = "slopmop-admin-token";
 const PREFS_KEY = "slopmop-admin-prefs";
-const DEFAULT_PREFS = { range: "7d", network: "", refresh: true, tz: "America/Los_Angeles", open: {} };
+/** `unit` is what the Activity charts count by; empty follows the range (24h by hour, 7d by day, 30d by week, 90d by month). */
+const DEFAULT_PREFS = { range: "7d", network: "", refresh: true, tz: "America/Los_Angeles", unit: "", open: {} };
 
 export const prefs = (() => {
   try {
