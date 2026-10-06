@@ -8,6 +8,7 @@ import type { Route } from "./ctx.js";
 export const PATHS: Record<string, Route> = {
   judge: "judge",
   vote: "vote",
+  open: "open",
   usage: "usage",
   health: "health",
   manifest: "manifest",

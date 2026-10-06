@@ -29,6 +29,7 @@ async function seed() {
     const r = await h.call("judge", judgeBody({ postText: `Seeded dashboard post ${i}: the quick brown fox jumps over the lazy dog, again and again and again.` }), { install: `install-dash-${i}xxxx` });
     await h.call("vote", { network: "linkedin", contentId: r.body.contentId, vote: i % 2 ? "no" : "probably" }, { install: `install-dash-${i}xxxx` });
   }
+  for (const [level, who] of [["none", 0], ["none", 1], ["red", 1]] as const) await h.call("open", { network: "linkedin", level }, { install: `install-dash-${who}xxxx` });
 }
 
 async function openDashboard(token: string | null, page = "overview") {
@@ -73,6 +74,9 @@ describe("admin dashboard", () => {
     const period = (label: string) => $$(".kpi").find((k) => k.querySelector(".lt")!.textContent === label)!.querySelector(".per")!.textContent;
     expect([period("Errors"), period("Daily-limit hits"), period("DAU"), period("MAU"), period("Installs")]).toEqual(["7d", "7d", "today", "30 days", "all time"]);
     expect($$("svg.chart").length).toBeGreaterThanOrEqual(4);
+    const opensCard = $$(".card").find((c) => c.querySelector("h2")?.textContent === "Panel opens")!;
+    expect(opensCard.querySelector("svg.chart")).not.toBeNull();
+    expect(opensCard.textContent).toMatch(/3 opens by 2 people.*2 not flagged.*0 yellow.*1 red/);
     expect($$("details.fold").every((d) => (d as HTMLDetailsElement).open)).toBe(true); // the overview starts fully open
     const on = async (page: string) => {
       $(`.side a[href="#/${page}"]`)!.click();

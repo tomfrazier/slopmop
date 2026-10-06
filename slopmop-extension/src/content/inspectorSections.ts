@@ -3,6 +3,7 @@ import { live } from "../shared/manifest";
 import { PALETTE } from "../shared/palette";
 import { h, s } from "../shared/dom";
 import type { Community, Explain } from "../shared/types";
+import type { DailyUsage } from "../shared/usage";
 import type { VerdictTone } from "../shared/verdict";
 import { TONE_DARK, TONE_STYLE } from "../shared/verdictStyle";
 import { VOTE_NAME, voteLevel } from "../shared/vote";
@@ -18,9 +19,17 @@ const MAX_NAMED_SIGNS = 3;
 /** A full bar, as a percentage. */
 const FULL_BAR_PCT = 100;
 
-/** "<X> / 100", above the chip and at least as prominent: the number leads the panel. */
-export function scoreHeader(score: number) {
-  return h("div", { class: "scorehead" }, h("span", { class: "num" }, String(Math.round(score))), h("span", { class: "of" }, " / 100"));
+/**
+ * "<X> / 100", above the chip and at least as prominent: the number leads the panel. With `today`, the checks used today sit
+ * opposite it, small and faint (the same figure as the toolbar popup).
+ */
+export function scoreHeader(score: number, today?: DailyUsage) {
+  return h(
+    "div",
+    { class: "scorehead" },
+    h("span", {}, h("span", { class: "num" }, String(Math.round(score))), h("span", { class: "of" }, " / 100")),
+    today ? h("span", { class: `today${today.full ? " full" : ""}`, title: "Posts checked today, out of your daily limit" }, `${today.shown} / ${today.limit} checks today`) : null,
+  );
 }
 
 const VOTE_OPTIONS: { v: Vote | null; label: string }[] = [

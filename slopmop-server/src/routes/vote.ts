@@ -2,6 +2,7 @@ import { CONTENT_ID_RE } from "../content-id.js";
 import type { Ctx } from "../ctx.js";
 import { HttpError, installIdOf, json, readJson } from "../http.js";
 import { SUPPORTED_NETWORKS } from "../networks.js";
+import { OPEN_LEVELS, type OpenLevel } from "../repos/opens.js";
 import { VOTES, type Vote } from "../store.js";
 import { manifestOf } from "./manifestRoute.js";
 import { disabledError, policyOf, requireNetwork } from "./shared.js";
@@ -20,6 +21,19 @@ export async function voteRoute(request: Request, ctx: Ctx): Promise<Response> {
   if (!(await ctx.store.content.exists(network.id, body.contentId))) throw new HttpError(404, "unknown_content", "That content hasn't been checked yet.");
   const community = await ctx.store.votes.set(network.id, body.contentId, installId, v as Vote | null);
   return json(200, { community, yourVote: v });
+}
+
+/**
+ * POST /api/v1/open {network, level: "none" | "yellow" | "red"}: someone opened the panel on a post, and how it was flagged.
+ * Best-effort analytics: a disabled install or one opening panels faster than a person could is answered but not recorded.
+ */
+export async function openRoute(request: Request, ctx: Ctx): Promise<Response> {
+  const installId = installIdOf(request);
+  const body = await readJson(request);
+  const network = requireNetwork(body.network);
+  if (!OPEN_LEVELS.includes(body.level as OpenLevel)) throw new HttpError(422, "invalid_input", 'level must be "none", "yellow" or "red".');
+  const recorded = !(await ctx.store.clients.isDisabled(installId)) && (await ctx.store.opens.record(network.id, installId, body.level as OpenLevel));
+  return json(200, { recorded });
 }
 
 /** GET /api/v1/usage: this install's checks used today, plus the server's policy for clients. */

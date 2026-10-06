@@ -165,6 +165,7 @@ td.detail { white-space: normal; }
 .fold > summary:focus-visible { outline: none; box-shadow: var(--shadow-focus); border-radius: var(--radius-sm); }
 .fold-body { margin-top: 8px; }
 .fold-body > .grid { margin-bottom: 12px; }
+.fold-body > .card { margin-bottom: 12px; }
 .fold-body > .card + .card, .fold-body > .grid + .card { margin-top: 12px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .chip { height: auto; padding: 3px 10px; display: inline-flex; gap: 4px; align-items: center; font: var(--type-label); box-shadow: none; }

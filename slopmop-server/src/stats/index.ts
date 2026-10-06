@@ -1,5 +1,5 @@
 import type { Store } from "../store.js";
-import { eventTotals, hourOfDay, timeSeries } from "./activity.js";
+import { eventTotals, hourOfDay, openTotals, timeSeries } from "./activity.js";
 import { communityStats, votedPostLists } from "./community.js";
 import { aiHistogram, networkTable, tellAverages } from "./content.js";
 import { latencySamples, recentProblems, storageSizes } from "./health.js";
@@ -21,7 +21,7 @@ export async function computeStats(store: Store, opts: { range: RangeKey; networ
   const s = makeScope(store, opts);
   const { config } = store;
 
-  const [totals, series, hours, installs, devices, networks, histogram, tells, community, posts, latencies, problems, storage, disabledClients] = await Promise.all([
+  const [totals, series, hours, installs, devices, networks, histogram, tells, community, posts, latencies, problems, storage, disabledClients, opens] = await Promise.all([
     eventTotals(s),
     timeSeries(s),
     hourOfDay(s),
@@ -36,6 +36,7 @@ export async function computeStats(store: Store, opts: { range: RangeKey; networ
     recentProblems(s),
     storageSizes(s),
     store.clients.listDisabled(),
+    openTotals(s),
   ]);
 
   return {
@@ -52,6 +53,7 @@ export async function computeStats(store: Store, opts: { range: RangeKey; networ
     installs,
     community,
     series,
+    opens,
     hourOfDay: hours,
     networks,
     aiHistogram: histogram,

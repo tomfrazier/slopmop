@@ -16,9 +16,11 @@ export interface Bucket {
   activeInstalls: number;
   newInstalls: number;
   votes: { no: number; maybe: number; probably: number };
+  /** Panels opened on posts, by how the post was flagged. */
+  opens: { none: number; yellow: number; red: number };
 }
 
-const emptyBucket = (t: number): Bucket => ({ t, end: t, scored: 0, cached: 0, errors: 0, limited: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, activeInstalls: 0, newInstalls: 0, votes: { no: 0, maybe: 0, probably: 0 } });
+const emptyBucket = (t: number): Bucket => ({ t, end: t, scored: 0, cached: 0, errors: 0, limited: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, activeInstalls: 0, newInstalls: 0, votes: { no: 0, maybe: 0, probably: 0 }, opens: { none: 0, yellow: 0, red: 0 } });
 
 /**
  * Daily-limit hits only: requests refused because the install had used its checks for the UTC day. Every other refusal (the
@@ -43,7 +45,7 @@ export async function eventTotals(s: Scope) {
 /** One bucket per chart unit across the range (hours, or days, weeks or months in the admin's timezone), filled from the log, new installs and votes. */
 export async function timeSeries(s: Scope): Promise<Bucket[]> {
   const cte = bucketCte(s.buckets);
-  const [events, fresh, votes] = await Promise.all([
+  const [events, fresh, votes, opens] = await Promise.all([
     s.q(
       `${cte} SELECT b.t b, SUM(kind='scored') scored, SUM(kind='cached') cached, SUM(kind='error') errors, ${DAILY_LIMIT_HITS} limited,
               SUM(input_tokens) tin, SUM(output_tokens) tout, COUNT(DISTINCT install_hash) active
@@ -52,6 +54,7 @@ export async function timeSeries(s: Scope): Promise<Bucket[]> {
     ),
     s.q(`${cte} SELECT b.t b, COUNT(*) n FROM b JOIN installs ON first_seen >= b.t AND first_seen < b.e GROUP BY b.t`),
     s.q(`${cte} SELECT b.t b, SUM(vote='no') n, SUM(vote='maybe') m, SUM(vote='probably') p FROM b JOIN votes ON at >= b.t AND at < b.e WHERE 1 = 1${s.netSql()} GROUP BY b.t`, s.netArgs()),
+    s.q(`${cte} SELECT b.t b, SUM(level='none') n, SUM(level='yellow') y, SUM(level='red') r FROM b JOIN panel_opens ON at >= b.t AND at < b.e WHERE 1 = 1${s.netSql()} GROUP BY b.t`, s.netArgs()),
   ]);
 
   const byStart = new Map<number, Bucket>(s.buckets.map((x) => [x.t, { ...emptyBucket(x.t), end: x.end }]));
@@ -69,7 +72,17 @@ export async function timeSeries(s: Scope): Promise<Bucket[]> {
     const b = byStart.get(num(r.b));
     if (b) b.votes = { no: num(r.n), maybe: num(r.m), probably: num(r.p) };
   }
+  for (const r of opens) {
+    const b = byStart.get(num(r.b));
+    if (b) b.opens = { none: num(r.n), yellow: num(r.y), red: num(r.r) };
+  }
   return [...byStart.values()];
+}
+
+/** Panels opened in the range, by how the post was flagged, and by how many installs. */
+export async function openTotals(s: Scope) {
+  const [r] = await s.q(`SELECT COUNT(*) total, SUM(level='none') n, SUM(level='yellow') y, SUM(level='red') red, COUNT(DISTINCT install_hash) people FROM panel_opens WHERE at >= ?${s.netSql()}`, [s.since, ...s.netArgs()]);
+  return { total: num(r?.total), none: num(r?.n), yellow: num(r?.y), red: num(r?.red), installs: num(r?.people) };
 }
 
 /** Checks and spend by hour of the day in the admin's timezone: when people use it. */

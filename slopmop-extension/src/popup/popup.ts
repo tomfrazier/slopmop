@@ -8,6 +8,7 @@ import { paintStats, paintUsage } from "./statsPanel";
 async function main() {
   await watchManifest();
   await mountSettingsPanel();
+  document.getElementById("version")!.textContent = `v${chrome.runtime.getManifest().version}`;
   void paintStats();
   void paintUsage();
   void paintDevice();

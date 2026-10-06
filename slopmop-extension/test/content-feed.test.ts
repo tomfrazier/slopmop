@@ -250,6 +250,30 @@ describe("the composer's 'check this draft' button", () => {
     }
   });
 
+  it("tells the server each time the panel is opened on a post, with how the post was flagged, but not when it's closed", async () => {
+    const mop = () => $("[data-slopmop-vote]")!.shadowRoot!.querySelector("button") as HTMLElement;
+    const opens = () => sent.filter((m) => m.type === "panelOpened").map((m) => m.level);
+    await openFeed(card("a"));
+    mop().click(); // open
+    await tick(100);
+    expect(opens()).toEqual(["red"]);
+    mop().click(); // the same press closes it: not an open
+    await tick(100);
+    expect(opens()).toEqual(["red"]);
+    mop().click(); // opened again
+    await tick(100);
+    expect(opens()).toEqual(["red", "red"]);
+    expect(judgeMessages()).toHaveLength(1); // reporting the open never asks for a second check
+  });
+
+  it("reports a post that isn't flagged as such", async () => {
+    judgeAnswer = () => verdict(0.02, 0.05);
+    await openFeed(card("a"));
+    ($("[data-slopmop-vote]")!.shadowRoot!.querySelector("button") as HTMLElement).click();
+    await tick(100);
+    expect(sent.filter((m) => m.type === "panelOpened").map((m) => m.level)).toEqual(["none"]);
+  });
+
   it("puts the panel away on a second press, on Escape, or a click elsewhere, and can be pressed again", async () => {
     judgeAnswer = () => verdict(0.6);
     await openFeed(composer);

@@ -8,6 +8,7 @@ import { developerDetails } from "./inspectorDeveloper";
 import { radarChart } from "./inspectorRadar";
 import { communityLine, personBar, scoreHeader, scoreZones, strongestSigns, verdictBlock } from "./inspectorSections";
 import { TELL_AXES } from "./labels";
+import { checksToday } from "./usageToday";
 import type { PanelState, VoteCtx } from "./votePanelTypes";
 
 /**
@@ -28,7 +29,7 @@ export function buildPanel(data: InspectData, vote?: VoteCtx): HTMLElement {
   return h(
     "div",
     { class: "panel", role: vote ? "dialog" : "tooltip", "aria-label": "Slop Mop breakdown" },
-    scoreHeader(displayScore(d.score)),
+    scoreHeader(displayScore(d.score), data.draft ? undefined : checksToday()), // a draft has its own count in its banner
     ...(draftNote ? [draftNote] : []),
     ...verdictBlock(data, e, verdict, vote),
     ...scoreZones(data, e, d.score, vote?.current ?? data.vote),

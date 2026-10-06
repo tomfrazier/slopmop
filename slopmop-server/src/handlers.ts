@@ -14,7 +14,7 @@ import { simulateRoute } from "./routes/simulateRoute.js";
 import { tunerRoute } from "./routes/tunerRoute.js";
 import { weightsRoute } from "./routes/weightsRoute.js";
 import { judgeRoute } from "./routes/judge.js";
-import { healthRoute, usageRoute, voteRoute } from "./routes/vote.js";
+import { healthRoute, openRoute, usageRoute, voteRoute } from "./routes/vote.js";
 
 export type { Ctx, Route } from "./ctx.js";
 
@@ -25,6 +25,7 @@ type Handler = (request: Request, ctx: Ctx) => Promise<Response>;
 const ROUTES: Record<Route, { methods: readonly Method[]; handler: Handler }> = {
   judge: { methods: ["POST"], handler: judgeRoute },
   vote: { methods: ["POST"], handler: voteRoute },
+  open: { methods: ["POST"], handler: openRoute },
   usage: { methods: ["GET"], handler: usageRoute },
   health: { methods: ["GET"], handler: healthRoute },
   export: { methods: ["GET"], handler: exportRoute },

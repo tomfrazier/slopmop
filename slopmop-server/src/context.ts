@@ -10,7 +10,7 @@ import { ScoringStore } from "./scoringStore.js";
 import { Store } from "./store.js";
 import { WeightStore } from "./weightStore.js";
 
-export const VERSION = "1.0.0";
+export const VERSION = "1.1.0";
 
 /** Builds the request context from the environment. */
 export async function createContext(env: Env, now: () => number = Date.now): Promise<Ctx> {
