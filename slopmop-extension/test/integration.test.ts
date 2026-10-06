@@ -31,6 +31,7 @@ function installChrome() {
     storage: { sync: area("sync"), local: area("local"), session: area("session"), onChanged: { addListener: (l: any) => changeListeners.push(l) } },
     runtime: {
       getURL: (p: string) => p,
+      getManifest: () => ({ version: "0.2.7" }),
       onMessage: { addListener: (l: Listener) => messageListeners.push(l) },
       onInstalled: { addListener() {} },
       onStartup: { addListener() {} },
@@ -79,6 +80,7 @@ describe("popup + background, wired like Chrome", () => {
     expect((document.getElementById("d-sent") as HTMLElement).textContent).toBe("0");
     expect((document.getElementById("s-today") as HTMLElement).textContent).toBe("0");
     expect((document.getElementById("enabled") as HTMLInputElement).checked).toBe(true);
+    expect((document.getElementById("version") as HTMLElement).textContent).toBe("v0.2.7"); // bottom right of the footer
   });
 
   it("sensitivity is a three-button group that saves the choice", async () => {

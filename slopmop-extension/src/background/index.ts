@@ -13,6 +13,7 @@ import { refreshManifestIfStale } from "./manifest";
 import { tabKey } from "./tabStorage";
 import { cacheKey, readCached } from "./verdictCache";
 import { clearVote, flushVotes, labelSyncStatus, saveVote, syncLabels } from "./votes";
+import { reportPanelOpen } from "./panelOpens";
 
 
 /** Answers a judge request from the saved verdict, or queues a check with the server. Any failure leaves the post alone (null). */
@@ -55,6 +56,7 @@ const handlers: Handlers = {
   myDebug: (_m, tabId) => (tabId === undefined ? blank() : getTab(tabId)),
   vote: (m) => saveVote(m.record),
   unvote: (m) => clearVote(m.urn),
+  panelOpened: (m) => void reportPanelOpen(m.level), // answered at once: the page never waits on it
   syncLabels: () => syncLabels(),
   getLabelSync: () => labelSyncStatus(),
 };

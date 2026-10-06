@@ -144,4 +144,16 @@ export const MIGRATIONS: string[][] = [
     // A name the admin gives an install so a device being troubleshot is easy to spot. Only ever shown to the admin.
     `ALTER TABLE installs ADD COLUMN alias TEXT`,
   ],
+  [
+    // Each time someone opens the panel on a post, and whether that post was flagged (see OpenRepo). No post id or text.
+    `CREATE TABLE IF NOT EXISTS panel_opens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      at INTEGER NOT NULL,
+      network TEXT NOT NULL,
+      install_hash TEXT NOT NULL,
+      level TEXT NOT NULL CHECK (level IN ('none','yellow','red'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS panel_opens_at ON panel_opens (at)`,
+    `CREATE INDEX IF NOT EXISTS panel_opens_install ON panel_opens (install_hash, at)`,
+  ],
 ];

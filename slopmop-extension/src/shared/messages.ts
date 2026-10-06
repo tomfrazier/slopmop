@@ -1,4 +1,4 @@
-import type { JudgeResponse, LabelRecord, LabelSync, SurfaceStats } from "./types";
+import type { JudgeResponse, LabelRecord, LabelSync, Level, SurfaceStats } from "./types";
 import type { Summary } from "./stats";
 
 export type Msg =
@@ -15,6 +15,7 @@ export type Msg =
   | { type: "refreshUsage" }
   | { type: "vote"; record: LabelRecord }
   | { type: "unvote"; urn: string }
+  | { type: "panelOpened"; level: Level }
   | { type: "syncLabels" }
   | { type: "getLabelSync" };
 

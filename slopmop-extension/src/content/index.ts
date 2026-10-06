@@ -8,6 +8,7 @@ import { closeInspector, closeVotePanel } from "./inspector";
 import { stopObserving } from "./observers";
 import { clear, render } from "./render";
 import { hooks, posts, state } from "./state";
+import { watchUsage } from "./usageToday";
 import { loadVotes, watchVotes } from "./votes";
 
 /** The content script's entry point: it runs on LinkedIn pages, finds posts, and wires everything up. */
@@ -26,6 +27,7 @@ async function init() {
   scan();
   watchFeed();
   watchSettings();
+  void watchUsage().catch(() => undefined); // only feeds the checks-today line in the panel
   void send({ type: "pageStart" }).catch(() => undefined);
   void send({ type: "getStats" })
     .then((stats) => (state.lastStats = stats ?? null))

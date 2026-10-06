@@ -1,6 +1,7 @@
 import { live } from "../shared/manifest";
 import { send } from "../shared/messages";
 import { $ } from "../shared/pageDom";
+import { dailyUsage, USAGE_KEYS, type UsageState } from "../shared/usage";
 
 
 /** Hidden and flagged counts. */
@@ -13,26 +14,13 @@ export async function paintStats() {
   $("flagged").textContent = r.flagged.total ? `${r.flagged.today} flagged today · ${r.flagged.total} all time (highlight mode)` : "";
 }
 
-interface UsageState {
-  usage?: { used: number; limit: number; resetsAt: string };
-  dailyLimit?: { until: number };
-  blocked?: { until: number; message: string };
-  dcIpPause?: { until: number; message: string };
-}
-
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
 /** Checks used today out of the server's daily cap, from the counts every server answer carries. */
 export async function paintUsage() {
-  const { usage, dailyLimit, blocked, dcIpPause } = (await chrome.storage.local.get(["usage", "dailyLimit", "blocked", "dcIpPause"])) as UsageState;
-  const now = Date.now();
-  const counterReset = !usage || Date.parse(usage.resetsAt) <= now; // the counter has reset since we last heard
-  const used = counterReset ? 0 : usage!.used;
-  const limit = usage?.limit ?? live.values.defaultDailyLimit // shown until the server has told us the real one;
-  const disabled = !!blocked && blocked.until > now; // the server's admin has disabled this install
-  const dcPaused = !!dcIpPause && dcIpPause.until > now; // this network's IP kept getting refused; see noteDatacenterRefusal
-  const full = disabled || dcPaused || (!!dailyLimit && dailyLimit.until > now);
-  const shown = full ? limit : used;
+  const state = (await chrome.storage.local.get([...USAGE_KEYS])) as UsageState;
+  const { usage, blocked, dcIpPause } = state;
+  const { shown, limit, full, disabled, dcPaused } = dailyUsage(state, Date.now(), live.values.defaultDailyLimit);
 
   $("usage-n").textContent = String(shown);
   $("usage-of").textContent = `of ${limit}`;

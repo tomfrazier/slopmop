@@ -3,7 +3,7 @@ import type { Vote } from "../shared/types";
 import { voteHides } from "../shared/vote";
 import { ensureVerdict } from "./analysis";
 import { decisionFor, panelState } from "./decision";
-import { openVotePanel } from "./inspector";
+import { openVotePanel, votePanelOpenOn } from "./inspector";
 import { active, hooks, restored, state } from "./state";
 import type { Tracked } from "./tracked";
 import { createVoteButton } from "./voteButton";
@@ -12,15 +12,30 @@ import { dropVote, setVote, voteOf } from "./votes";
 /** Puts the mop icon beside a post's "…" menu (if it isn't there already), wired to its panel. */
 export function ensureButton(t: Tracked) {
   if (!active() || t.vbtn?.host.isConnected) return;
-  t.vbtn = createVoteButton(t.el, (button) =>
+  t.vbtn = createVoteButton(t.el, (button) => {
     openVotePanel(button, {
       getState: () => panelState(t),
       ensure: async () => void (await ensureVerdict(t)),
       onPick: (v) => castVote(t, v),
       onRefold: () => hideAgain(t),
-    }),
-  );
+    });
+    if (votePanelOpenOn(button)) void reportOpen(t); // the same click closes an open panel: only count opening it
+  });
   t.vbtn.setVote(voteOf(t.urn));
+}
+
+/**
+ * Tells the server the panel was opened, and whether the post was flagged (as the panel shows it), once its score is known.
+ * Waiting on the score never starts a second check: the panel's own request is already the post's pending one.
+ */
+async function reportOpen(t: Tracked) {
+  try {
+    await ensureVerdict(t);
+    const level = panelState(t).inspect?.decision.level;
+    if (level) await send({ type: "panelOpened", level });
+  } catch {
+    /* only a count */
+  }
 }
 
 /** Folds a post the user had unfolded back up. */

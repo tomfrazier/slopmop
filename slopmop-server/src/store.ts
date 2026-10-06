@@ -8,6 +8,7 @@ import { EventRepo } from "./repos/events.js";
 import { ExportRepo } from "./repos/exports.js";
 import { CuratedRepo } from "./repos/curated.js";
 import { IpCapRepo } from "./repos/ipCaps.js";
+import { OpenRepo } from "./repos/opens.js";
 import { VoteRepo } from "./repos/votes.js";
 
 export { dayKey, nextResetIso } from "./repos/shared.js";
@@ -18,7 +19,7 @@ export type { CheckEvent, Community, ContentWrite, DisabledClient, EventKind, Ex
 
 /**
  * The registry, split by responsibility: `caps` (the daily cap), `events` (the activity log), `clients` (kill switch and
- * rate window), `content` (what Jev said about each post), `votes`, and `exports` (for tuning). This class only wires
+ * rate window), `content` (what Jev said about each post), `votes`, `opens` (panel opens), and `exports` (for tuning). This class only wires
  * them to the database, the config and the clock, and owns the one thing they all share: hashing install ids.
  */
 export class Store {
@@ -30,6 +31,7 @@ export class Store {
   readonly exports: ExportRepo;
   readonly curated: CuratedRepo;
   readonly ipCaps: IpCapRepo;
+  readonly opens: OpenRepo;
 
   constructor(
     readonly db: Db,
@@ -45,6 +47,7 @@ export class Store {
     this.exports = new ExportRepo(deps);
     this.curated = new CuratedRepo(deps);
     this.ipCaps = new IpCapRepo(deps);
+    this.opens = new OpenRepo(deps);
   }
 
   /** Only a salted hash of an install id is ever stored. */

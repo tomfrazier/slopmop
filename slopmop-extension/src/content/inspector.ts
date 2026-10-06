@@ -198,6 +198,8 @@ export function showNotice(anchor: Element, dialog: Element, title: string, body
 /* ---------------- The click-triggered panel under the mop icon ---------------- */
 
 let votePanel: { anchor: HTMLElement; close: () => void } | null = null;
+/** True while the panel is open on this mop icon. */
+export const votePanelOpenOn = (anchor: HTMLElement) => votePanel?.anchor === anchor;
 
 export function closeVotePanel() {
   votePanel?.close();

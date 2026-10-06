@@ -380,3 +380,23 @@ describe("a busy server", () => {
     expect(times[1] - times[0]).toBeGreaterThanOrEqual(950); // not the default 500ms backoff
   });
 });
+
+describe("panel opens", () => {
+  it("tells the server, with the install id and only the level, and never spends a check", async () => {
+    await send({ type: "panelOpened", level: "yellow" });
+    await tick();
+    const opens = requests.filter((r) => r.url === `${SERVER}/api/v1/open`);
+    expect(opens).toHaveLength(1);
+    expect(opens[0]).toMatchObject({ method: "POST", body: { network: "linkedin", level: "yellow" } });
+    expect(opens[0].headers["x-install-id"]).toMatch(/^[\w-]{8,64}$/);
+    expect(judgeRequests()).toHaveLength(0);
+  });
+
+  it("shrugs off a failure: nothing retried, nothing reported as a problem", async () => {
+    respond = () => ({ status: 503, body: { error: "down" } });
+    await send({ type: "panelOpened", level: "red" });
+    await tick();
+    expect(requests.filter((r) => r.url === `${SERVER}/api/v1/open`)).toHaveLength(1);
+    expect(mem.local.lastProblem).toBeUndefined();
+  });
+});

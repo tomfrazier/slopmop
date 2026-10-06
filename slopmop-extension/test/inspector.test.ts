@@ -5,9 +5,21 @@ import { closeInspector, radarChart, showInspectorBeside, type InspectData } fro
 import { buildPanel } from "../src/content/inspectorPanel";
 import { HOW_IT_WORKS_URL } from "../src/content/inspectorSections";
 import { TELL_AXES } from "../src/content/labels";
+import { watchUsage } from "../src/content/usageToday";
 import { decide, decideOwn } from "../src/shared/decide";
 import type { JudgeResponse } from "../src/shared/types";
 import { verdictLabel } from "../src/shared/verdict";
+
+// Just enough of chrome.storage for the checks-today line: a local store and its change listeners.
+const chromeStore: Record<string, any> = {};
+const listeners: ((changes: Record<string, { newValue: unknown }>, area: string) => void)[] = [];
+const changed = (changes: Record<string, { newValue: unknown }>) => listeners.forEach((l) => l(changes, "local"));
+(globalThis as any).chrome = {
+  storage: {
+    local: { get: async (keys: string[]) => Object.fromEntries(keys.filter((k) => k in chromeStore).map((k) => [k, chromeStore[k]])) },
+    onChanged: { addListener: (l: (typeof listeners)[number]) => listeners.push(l) },
+  },
+};
 
 const IDS = TELL_AXES.map((a) => a.id);
 const resp = (level: number, ai = 0.95, over: Partial<JudgeResponse> = {}): JudgeResponse => ({
@@ -40,10 +52,31 @@ describe("the breakdown panel", () => {
   it("leads with the numeric score, out of 100, above the chip", () => {
     show(resp(0.9));
     const p = panelOf()!;
-    expect(p.querySelector(".scorehead")!.textContent).toMatch(/^\d+ \/ 100$/);
+    expect(p.querySelector(".scorehead > span:first-child")!.textContent).toMatch(/^\d+ \/ 100$/);
     const order = [...p.children].map((c) => c.className);
     expect(order.indexOf("scorehead")).toBe(0);
     expect(order.indexOf("scorehead")).toBeLessThan(order.indexOf("head"));
+  });
+
+  it("shows today's checks opposite the score, from the counts the background worker stores", async () => {
+    const t = Date.now();
+    chromeStore.usage = { used: 37, limit: 250, resetsAt: new Date(t + 3600_000).toISOString() };
+    await watchUsage();
+    show(resp(0.9));
+    expect(panelOf()!.querySelector(".scorehead .today")!.textContent).toBe("37 / 250 checks today");
+    chromeStore.dailyLimit = { until: t + 3600_000 }; // the server refused for the day: shown full, in red
+    changed({ dailyLimit: { newValue: chromeStore.dailyLimit } });
+    closeInspector();
+    show(resp(0.9));
+    const full = panelOf()!.querySelector(".scorehead .today")!;
+    expect(full.textContent).toBe("250 / 250 checks today");
+    expect(full.classList.contains("full")).toBe(true);
+  });
+
+  it("leaves the checks line off a draft, which has its own count", () => {
+    const r = resp(0.9);
+    const data: InspectData = { urn: "u", text: "t", own: true, engagement: none, response: r, decision: decideOwn(r, "moderate"), mode: "highlight", sensitivity: "moderate", vote: null, draft: { used: 1, limit: 5 } };
+    expect(buildPanel(data).querySelector(".scorehead .today")).toBeNull();
   });
 
   it("shows a plain verdict chip and a sentence, in 'possibly / likely' language", () => {
