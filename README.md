@@ -78,7 +78,7 @@ Slop Mop is an experiment, so it shows its work, including where it misses.
 
 - The **admin console** reports what Jev is seeing: how likely posts are to be AI-drafted, which signs show up most, where community votes agree with Jev and where they don't, cost and calls by hour, day and device. I hope this grows into a data set we can all look at as people join.
 - **Where it's wrong:** stiff, formal human writing can look like slop. Great writing sometimes breaks every rule. Humor, translation and odd genres confuse it. Judgments are probabilistic, and Slop Mop says so instead of pretending otherwise.
-- **How small the tuning is:** the thresholds were fitted on 27 hand votes. Treat them as a starting point.
+- **How small the tuning is:** the thresholds in this repo were fitted on 27 hand votes but doesn't reflect slopmop.lol. Treat them as a starting point.
 - **Slop Mop can be gamed.** Once people know the signs, some will write around them. That's part of what's worth measuring.
 
 ## Limits, for now
